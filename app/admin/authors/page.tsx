@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Plus, Edit2, Trash2, Save, X, MapPin, Calendar, Users } from 'lucide-react'
+import { Plus, Edit2, Trash2, Save, X, User, Mail, Hash } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { AvatarUpload } from '@/components/avatar-upload'
 
@@ -25,15 +25,8 @@ interface Author {
   social_links?: any
   is_active?: boolean
   slug?: string
-  original_wp_id?: number
   created_at?: string
   updated_at?: string
-  // Legacy fields for compatibility
-  title?: string
-  countries_explored?: string
-  expert_since?: string
-  followers?: string
-  badges?: string[]
 }
 
 export default function AuthorsManagement() {
@@ -42,67 +35,9 @@ export default function AuthorsManagement() {
   const [isCreating, setIsCreating] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  const defaultAuthors: Author[] = [
-    {
-      id: 'sarah-johnson',
-      display_name: 'Sarah Johnson',
-      title: 'Travel Expert',
-      bio: "Your friendly neighborhood travel obsessive who's been exploring the world for 10+ years. I'm all about finding those hidden gems and sharing the real tea on destinations - no sugar-coating, just honest vibes.",
-      avatar_url: '/placeholder.svg',
-      countries_explored: '50+ countries explored',
-      expert_since: 'Expert since 2014',
-      followers: '1M+ fellow travelers',
-      badges: ['Adventure seeker', 'Food lover', 'Culture enthusiast']
-    },
-    {
-      id: 'marco-rossi',
-      display_name: 'Marco Rossi',
-      title: 'Local Culture Specialist',
-      bio: 'Born and raised in Rome, I spend my time uncovering the authentic experiences that make each destination unique. From secret family recipes to hidden historical gems.',
-      avatar_url: '/placeholder.svg',
-      countries_explored: '30+ regions explored',
-      expert_since: 'Expert since 2018',
-      followers: '500K+ culture enthusiasts',
-      badges: ['Local insider', 'History buff', 'Foodie guide']
-    },
-    {
-      id: 'elena-santos',
-      display_name: 'Elena Santos',
-      title: 'Adventure Travel Guide',
-      bio: 'Adrenaline junkie turned travel writer. I specialize in off-the-beaten-path adventures and sustainable travel practices that respect local communities.',
-      avatar_url: '/placeholder.svg',
-      countries_explored: '40+ countries explored',
-      expert_since: 'Expert since 2016',
-      followers: '750K+ adventure seekers',
-      badges: ['Adventure expert', 'Eco traveler', 'Mountain guide']
-    },
-    {
-      id: 'david-chen',
-      name: 'David Chen',
-      title: 'Luxury Travel Curator',
-      bio: 'Former hospitality executive with a passion for creating unforgettable luxury experiences. I know the best hotels, restaurants, and exclusive experiences worldwide.',
-      avatar_url: '/placeholder.svg',
-      countries_explored: '60+ destinations curated',
-      expert_since: 'Expert since 2012',
-      followers: '300K+ luxury travelers',
-      badges: ['Luxury specialist', 'Hotel insider', 'Fine dining expert']
-    },
-    {
-      id: 'anna-mueller',
-      name: 'Anna Mueller',
-      title: 'Budget Travel Expert',
-      bio: 'Proving that amazing travel experiences don\'t have to break the bank. I\'ve mastered the art of traveling smart, not expensive.',
-      avatar_url: '/placeholder.svg',
-      countries_explored: '45+ countries on a budget',
-      expert_since: 'Expert since 2017',
-      followers: '800K+ budget travelers',
-      badges: ['Budget master', 'Deal finder', 'Backpacker pro']
-    }
-  ]
 
   const loadAuthors = async () => {
     try {
-      // Use modern_authors table - more secure approach
       const { data, error } = await supabase
         .from('modern_authors')
         .select('*')
@@ -110,64 +45,18 @@ export default function AuthorsManagement() {
 
       if (error) {
         console.error('Error loading authors:', error)
-        // Fallback to check authors table if modern_authors doesn't exist
-        const { data: legacyData, error: legacyError } = await supabase
-          .from('authors')
-          .select('*')
-          .order('created_at', { ascending: false })
-          
-        if (legacyError) {
-          setAuthors(defaultAuthors)
-        } else {
-          setAuthors(legacyData || defaultAuthors)
-        }
-      } else if (!data || data.length === 0) {
-        await seedDefaultAuthors()
-        setAuthors(defaultAuthors)
+        setAuthors([])
       } else {
-        setAuthors(data)
+        setAuthors(data || [])
       }
     } catch (error) {
-      console.error('Error:', error)
-      setAuthors(defaultAuthors)
+      console.error('Error loading authors:', error)
+      setAuthors([])
     } finally {
       setLoading(false)
     }
   }
 
-  // REMOVED DANGEROUS SQL INJECTION VULNERABILITY
-  // Table creation should be done through proper migrations, not RPC calls
-
-  const seedDefaultAuthors = async () => {
-    try {
-      // Try modern_authors first
-      const { error } = await supabase
-        .from('modern_authors')
-        .insert(defaultAuthors.map(author => ({
-          ...author,
-          display_name: author.display_name,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })))
-      
-      if (error) {
-        // Fallback to authors table if modern_authors doesn't exist
-        const { error: legacyError } = await supabase
-          .from('authors')
-          .insert(defaultAuthors.map(author => ({
-            ...author,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })))
-          
-        if (legacyError) {
-          console.log('Could not seed default authors:', legacyError)
-        }
-      }
-    } catch (error) {
-      console.log('Could not seed default authors:', error)
-    }
-  }
 
   useEffect(() => {
     loadAuthors()
@@ -175,48 +64,32 @@ export default function AuthorsManagement() {
 
   const saveAuthor = async (author: Author) => {
     try {
-      // Try modern_authors first
       const { data, error } = await supabase
         .from('modern_authors')
         .upsert([{
           id: author.id,
           display_name: author.display_name,
-          title: author.title,
+          first_name: author.first_name,
+          last_name: author.last_name,
+          email: author.email,
+          username: author.username,
           bio: author.bio,
           avatar_url: author.avatar_url,
-          countries_explored: author.countries_explored,
-          expert_since: author.expert_since,
-          followers: author.followers,
-          badges: author.badges,
+          role: author.role,
+          social_links: author.social_links,
+          is_active: author.is_active,
+          slug: author.slug,
           updated_at: new Date().toISOString()
         }])
         .select()
 
       if (error) {
-        // Fallback to legacy authors table
-        const { error: legacyError } = await supabase
-          .from('authors')
-          .upsert([{
-            id: author.id,
-            display_name: author.display_name,
-            title: author.title,
-            bio: author.bio,
-            avatar_url: author.avatar_url,
-            countries_explored: author.countries_explored,
-            expert_since: author.expert_since,
-            followers: author.followers,
-            badges: author.badges,
-            updated_at: new Date().toISOString()
-          }])
-          .select()
-          
-        if (legacyError) {
-          console.error('Error saving author:', legacyError)
-          alert('Note: Changes saved locally only. Database connection needed for permanent storage.')
-        }
+        console.error('Error saving author:', error)
+        alert('Failed to save author. Please try again.')
+        return
       }
       
-      // Always update local state for immediate UI feedback
+      // Update local state for immediate UI feedback
       setAuthors(prev => 
         prev.find(a => a.id === author.id) 
           ? prev.map(a => a.id === author.id ? author : a)
@@ -225,41 +98,27 @@ export default function AuthorsManagement() {
       
     } catch (error) {
       console.error('Error:', error)
-      alert('Note: Changes saved locally only. Database connection needed for permanent storage.')
-      
-      // Update local state as fallback
-      setAuthors(prev => 
-        prev.find(a => a.id === author.id) 
-          ? prev.map(a => a.id === author.id ? author : a)
-          : [...prev, author]
-      )
+      alert('Failed to save author. Please check your connection.')
     }
   }
 
   const deleteAuthor = async (authorId: string) => {
     try {
-      // Try modern_authors first
       const { error } = await supabase
         .from('modern_authors')
         .delete()
         .eq('id', authorId)
 
       if (error) {
-        // Fallback to legacy authors table
-        const { error: legacyError } = await supabase
-          .from('authors')
-          .delete()
-          .eq('id', authorId)
-          
-        if (legacyError) {
-          console.error('Error deleting author:', legacyError)
-        }
+        console.error('Error deleting author:', error)
+        alert('Failed to delete author. Please try again.')
+        return
       }
       
       setAuthors(prev => prev.filter(a => a.id !== authorId))
     } catch (error) {
       console.error('Error:', error)
-      setAuthors(prev => prev.filter(a => a.id !== authorId))
+      alert('Failed to delete author. Please check your connection.')
     }
   }
 
@@ -278,19 +137,12 @@ export default function AuthorsManagement() {
     onSave: (author: Author) => void
     onCancel: () => void
   }) => {
-    const [formData, setFormData] = useState({
-      ...author,
-      badges: author.badges || []
-    })
+    const [formData, setFormData] = useState(author)
 
     const updateField = (field: keyof Author, value: any) => {
       setFormData(prev => ({ ...prev, [field]: value }))
     }
 
-    const updateBadges = (badgeString: string) => {
-      const badges = badgeString.split(',').map(b => b.trim()).filter(b => b)
-      setFormData(prev => ({ ...prev, badges }))
-    }
 
     return (
       <Card className="mb-6">
@@ -309,15 +161,54 @@ export default function AuthorsManagement() {
                     updateField('id', generateAuthorId(e.target.value))
                   }
                 }}
-                placeholder="Sarah Johnson"
+                placeholder="John Doe"
               />
             </div>
             <div>
-              <Label>Title</Label>
+              <Label>Username</Label>
               <Input
-                value={formData.title}
-                onChange={(e) => updateField('title', e.target.value)}
-                placeholder="Travel Expert"
+                value={formData.username}
+                onChange={(e) => updateField('username', e.target.value)}
+                placeholder="john-doe"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>First Name</Label>
+              <Input
+                value={formData.first_name}
+                onChange={(e) => updateField('first_name', e.target.value)}
+                placeholder="John"
+              />
+            </div>
+            <div>
+              <Label>Last Name</Label>
+              <Input
+                value={formData.last_name}
+                onChange={(e) => updateField('last_name', e.target.value)}
+                placeholder="Doe"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={formData.email}
+                onChange={(e) => updateField('email', e.target.value)}
+                placeholder="john@example.com"
+              />
+            </div>
+            <div>
+              <Label>Role</Label>
+              <Input
+                value={formData.role}
+                onChange={(e) => updateField('role', e.target.value)}
+                placeholder="author"
               />
             </div>
           </div>
@@ -341,40 +232,23 @@ export default function AuthorsManagement() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Countries Explored</Label>
+              <Label>Slug</Label>
               <Input
-                value={formData.countries_explored}
-                onChange={(e) => updateField('countries_explored', e.target.value)}
-                placeholder="50+ countries explored"
+                value={formData.slug}
+                onChange={(e) => updateField('slug', e.target.value)}
+                placeholder="john-doe"
               />
             </div>
-            <div>
-              <Label>Expert Since</Label>
-              <Input
-                value={formData.expert_since}
-                onChange={(e) => updateField('expert_since', e.target.value)}
-                placeholder="Expert since 2014"
+            <div className="flex items-center gap-2">
+              <Label>Active</Label>
+              <input
+                type="checkbox"
+                checked={formData.is_active || true}
+                onChange={(e) => updateField('is_active', e.target.checked)}
               />
             </div>
-            <div>
-              <Label>Followers</Label>
-              <Input
-                value={formData.followers}
-                onChange={(e) => updateField('followers', e.target.value)}
-                placeholder="1M+ fellow travelers"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>Badges (comma-separated)</Label>
-            <Input
-              value={formData.badges ? formData.badges.join(', ') : ''}
-              onChange={(e) => updateBadges(e.target.value)}
-              placeholder="Adventure seeker, Food lover, Culture enthusiast"
-            />
           </div>
 
           <div className="flex gap-2 pt-4">
@@ -419,14 +293,16 @@ export default function AuthorsManagement() {
         <AuthorForm
           author={{
             id: '',
-            name: '',
-            title: '',
+            display_name: '',
+            first_name: '',
+            last_name: '',
+            email: '',
+            username: '',
             bio: '',
             avatar_url: '/placeholder.svg',
-            countries_explored: '',
-            expert_since: '',
-            followers: '',
-            badges: []
+            role: 'author',
+            is_active: true,
+            slug: ''
           }}
           onSave={handleSave}
           onCancel={() => setIsCreating(false)}
@@ -463,7 +339,7 @@ export default function AuthorsManagement() {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <h3 className="text-xl font-bold">{author.display_name}</h3>
-                      {author.title && <Badge className="text-xs">{author.title}</Badge>}
+                      {author.role && <Badge className="text-xs">{author.role}</Badge>}
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -488,32 +364,37 @@ export default function AuthorsManagement() {
                   <p className="text-sm text-gray-600 mb-3 line-clamp-2">{author.bio}</p>
                   
                   <div className="flex flex-wrap gap-2 text-xs mb-3">
-                    {author.countries_explored && (
+                    {author.username && (
                       <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
-                        <MapPin className="w-3 h-3" />
-                        <span>{author.countries_explored}</span>
+                        <User className="w-3 h-3" />
+                        <span>@{author.username}</span>
                       </div>
                     )}
-                    {author.expert_since && (
+                    {author.email && (
                       <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{author.expert_since}</span>
+                        <Mail className="w-3 h-3" />
+                        <span>{author.email}</span>
                       </div>
                     )}
-                    {author.followers && (
+                    {author.slug && (
                       <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
-                        <Users className="w-3 h-3" />
-                        <span>{author.followers}</span>
+                        <Hash className="w-3 h-3" />
+                        <span>{author.slug}</span>
                       </div>
                     )}
                   </div>
                   
                   <div className="flex flex-wrap gap-1">
-                    {author.badges && author.badges.map((badge, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {badge}
+                    {author.first_name && author.last_name && (
+                      <Badge variant="outline" className="text-xs">
+                        {author.first_name} {author.last_name}
                       </Badge>
-                    ))}
+                    )}
+                    {author.is_active !== undefined && (
+                      <Badge variant={author.is_active ? "default" : "secondary"} className="text-xs">
+                        {author.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>

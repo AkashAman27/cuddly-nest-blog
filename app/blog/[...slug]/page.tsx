@@ -2,7 +2,23 @@ import { getStarterPackForPost, getLegacyBlogPostBySlug, getCuddlyNestPostBySlug
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { BlogArticleTemplate } from "@/components/blog-article-template"
-import { convertAnyPostToArticle } from "@/lib/universal-blog-converter"
+import { calculateReadingTime, formatReadingTime } from "@/lib/utils/reading-time"
+// Simple converter function for legacy posts
+const convertAnyPostToArticle = (post: any) => {
+  // Calculate reading time if not already stored
+  const readingMinutes = post.reading_time || calculateReadingTime(post.content || '')
+  
+  return {
+    ...post,
+    publishedAt: post.published_at || post.created_at,
+    featuredImage: post.featured_image_url ? { file_url: post.featured_image_url } : null,
+    author: post.author || { display_name: 'CuddlyNest Team' },
+    read_time: formatReadingTime(readingMinutes),
+    sections: [],
+    faqs: post.faq_items || [],
+    ctas: post.ctas || []
+  }
+}
 import { cookies } from 'next/headers'
 
 interface BlogPostPageProps {
