@@ -230,34 +230,13 @@ export async function getModernPostBySlug(slug: string): Promise<ModernPost | nu
       return null
     }
 
-    // Get sections for this post with template information
-    const { data: sectionsData } = await supabase
-      .from('modern_post_sections')
-      .select(`
-        *
-      `)
-      .eq('post_id', postData.id)
-      .eq('is_active', true)
-      .order('position', { ascending: true })
-
-    // Transform sections to match expected interface
-    const transformedSections = (sectionsData || []).map(section => ({
-      ...section
-    }))
-
-    console.log('Debug info:', {
-      postId: postData.id,
-      sectionsCount: transformedSections.length,
-      sections: transformedSections.map(s => ({ id: s.id, template_id: s.template_id, position: s.position }))
-    })
-
-    // Transform data to match expected structure
+    // Transform data to match expected structure (no sections needed)
     const transformedPost = {
       ...postData,
       author: postData.modern_authors,
       blog_authors: postData.modern_authors, // Keep for backward compatibility
       categories: [],
-      sections: transformedSections,
+      sections: [], // No longer using sections
       featured_image_url: postData.og_image || null,
       og_image: postData.og_image ? { file_url: postData.og_image } : null,
       published_at: postData.published_at || postData.created_at
@@ -301,22 +280,9 @@ export async function getModernPostBySlugWithPreview(slug: string, allowDraft: b
       return null
     }
 
-    // Get sections for the post (use same client for consistency)
-    const { data: sectionsData, error: sectionsError } = await client
-      .from('modern_post_sections')
-      .select('*')
-      .eq('post_id', postData.id)
-      .eq('is_active', true)
-      .order('position', { ascending: true })
-
-    if (sectionsError) {
-      console.error('Error fetching post sections:', sectionsError)
-      // Continue with empty sections array instead of failing
-    }
-
     const transformedPost: ModernPost = {
       ...postData,
-      sections: sectionsData || [],
+      sections: [], // No longer using sections
       author: postData.modern_authors || null,
       og_image: postData.og_image ? { file_url: postData.og_image } : null
     }
@@ -389,28 +355,10 @@ export async function getRecentPosts(limit: number = 8) {
         }
       }
       
-      // Fallback: try to get image from hero section for posts without og_image
-      try {
-        const { data: heroSection } = await supabase
-          .from('modern_post_sections')
-          .select('data')
-          .eq('post_id', post.id)
-          .eq('template_id', '6f579a71-463c-43b4-b203-c2cb46c80d47') // Hero section template ID
-          .eq('position', 0)
-          .maybeSingle()
-
-        const heroImage = heroSection?.data?.backgroundImage
-        
-        return {
-          ...post,
-          featured_image: heroImage ? { file_url: heroImage } : null
-        }
-      } catch (err) {
-        // If no hero section found, return post without image
-        return {
-          ...post,
-          featured_image: null
-        }
+      // No fallback needed since we no longer use sections
+      return {
+        ...post,
+        featured_image: null
       }
     })
   )
@@ -464,28 +412,10 @@ export async function getFeaturedPosts(limit: number = 6) {
         }
       }
       
-      // Fallback: try to get image from hero section for posts without og_image
-      try {
-        const { data: heroSection } = await supabase
-          .from('modern_post_sections')
-          .select('data')
-          .eq('post_id', post.id)
-          .eq('template_id', '6f579a71-463c-43b4-b203-c2cb46c80d47') // Hero section template ID
-          .eq('position', 0)
-          .maybeSingle()
-
-        const heroImage = heroSection?.data?.backgroundImage
-        
-        return {
-          ...post,
-          featured_image: heroImage ? { file_url: heroImage } : null
-        }
-      } catch (err) {
-        // If no hero section found, return post without image
-        return {
-          ...post,
-          featured_image: null
-        }
+      // No fallback needed since we no longer use sections
+      return {
+        ...post,
+        featured_image: null
       }
     })
   )
@@ -1275,26 +1205,8 @@ export async function getLegacyBlogPostBySlug(slug: string): Promise<LegacyBlogP
       return null
     }
 
-    // Try to fetch the real WordPress content from modern_post_sections
-    // First, find the corresponding modern post
-    const { data: modernPost } = await client
-      .from('cuddly_nest_modern_post')
-      .select('id')
-      .eq('slug', slug)
-      .single()
-
+    // No longer fetching WordPress content from sections
     let modernWordPressContent: any[] = []
-    
-    if (modernPost) {
-      // Fetch the modern post sections which contain the real WordPress content
-      const { data: modernSections } = await client
-        .from('modern_post_sections')
-        .select('id, position, data')
-        .eq('post_id', modernPost.id)
-        .order('position', { ascending: true })
-
-      modernWordPressContent = modernSections || []
-    }
 
     // Also fetch legacy blog sections as fallback
     const { data: sectionsData, error: sectionsError } = await client
@@ -1517,6 +1429,19 @@ export async function searchCombinedPosts(query: string, limit: number = 20) {
 // SIMPLIFIED CUDDLY NEST MODERN POST FUNCTIONS
 // =============================================
 
+export interface CuddlyNestCTA {
+  id: string
+  post_id: string
+  title: string
+  description?: string
+  button_text: string
+  button_link: string
+  position: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface CuddlyNestPost {
   id: string
   title: string
@@ -1581,6 +1506,7 @@ export interface CuddlyNestPost {
     name: string
     slug: string
   }[]
+  ctas?: CuddlyNestCTA[]
 }
 
 // Get simplified post by slug
@@ -1593,7 +1519,8 @@ export async function getCuddlyNestPostBySlug(slug: string): Promise<CuddlyNestP
         author:modern_authors(id, display_name, avatar_url, bio),
         categories:cuddly_nest_post_categories(
           category:modern_categories(id, name, slug)
-        )
+        ),
+        ctas:cuddly_nest_ctas(id, title, description, button_text, button_link, position, is_active)
       `)
       .eq('slug', slug)
       .eq('status', 'published')
@@ -1616,7 +1543,8 @@ export async function getCuddlyNestPostBySlug(slug: string): Promise<CuddlyNestP
         avatar_url: post.author.avatar_url,
         bio: post.author.bio
       } : undefined,
-      categories: post.categories?.map((pc: any) => pc.category).filter(Boolean) || []
+      categories: post.categories?.map((pc: any) => pc.category).filter(Boolean) || [],
+      ctas: post.ctas?.filter((cta: any) => cta.is_active) || []
     }
   } catch (error) {
     console.error('Exception fetching cuddly nest post:', error)
@@ -1637,7 +1565,8 @@ export async function getCuddlyNestPostBySlugWithPreview(slug: string, allowDraf
         author:modern_authors(id, display_name, avatar_url, bio),
         categories:cuddly_nest_post_categories(
           category:modern_categories(id, name, slug)
-        )
+        ),
+        ctas:cuddly_nest_ctas(id, title, description, button_text, button_link, position, is_active)
       `)
       .eq('slug', slug)
 
@@ -1665,7 +1594,8 @@ export async function getCuddlyNestPostBySlugWithPreview(slug: string, allowDraf
         avatar_url: post.author.avatar_url,
         bio: post.author.bio
       } : undefined,
-      categories: post.categories?.map((pc: any) => pc.category).filter(Boolean) || []
+      categories: post.categories?.map((pc: any) => pc.category).filter(Boolean) || [],
+      ctas: post.ctas?.filter((cta: any) => cta.is_active) || []
     }
   } catch (error) {
     console.error('Exception fetching cuddly nest post with preview:', error)

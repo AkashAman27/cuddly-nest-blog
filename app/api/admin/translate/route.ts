@@ -41,23 +41,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the complete original post with all sections and metadata
+    // Get the complete original post with metadata (no sections table in current schema)
     console.log('Fetching complete post data with ID:', postId)
     const { data: originalPost, error: postError } = await supabaseAdmin
       .from('cuddly_nest_modern_post')
       .select(`
         *,
-        author:modern_authors(display_name, bio, avatar_url, social_links),
-        sections:modern_post_sections!inner(
-          id,
-          template_id,
-          title,
-          data,
-          position,
-          is_active,
-          created_at,
-          updated_at
-        )
+        author:modern_authors(display_name, bio, avatar_url, social_links)
       `)
       .eq('id', postId)
       .single()
@@ -73,7 +63,8 @@ export async function POST(request: NextRequest) {
     console.log('Complete post data found:', { 
       id: originalPost.id, 
       title: originalPost.title,
-      sectionsCount: originalPost.sections?.length || 0
+      hasContent: !!originalPost.content,
+      contentLength: originalPost.content?.length || 0
     })
 
     // If background processing requested, start comprehensive translation
@@ -341,53 +332,9 @@ async function processComprehensiveTranslation(originalPost: any, languageCode: 
       translationId = newTranslation.id
     }
 
-    // Step 4: Translate all sections comprehensively
-    console.log(`🔧 Translating ${originalPost.sections?.length || 0} sections...`)
+    // Note: Section-based translation not needed in current schema
+    console.log(`✅ Main post content translation completed`)
     let sectionsTranslated = 0
-    
-    if (originalPost.sections && originalPost.sections.length > 0) {
-      // Clear existing translated sections if regenerating
-      if (regenerate) {
-        await supabaseAdmin
-          .from('translated_sections')
-          .delete()
-          .eq('translation_id', translationId)
-      }
-
-      for (const section of originalPost.sections) {
-        try {
-          console.log(`🔨 Translating section: ${section.template_id}`)
-          
-          // Translate section data comprehensively
-          const translatedSectionData = await translateSectionData(section.data, languageCode)
-          
-          // Insert translated section
-          const { error: sectionError } = await supabaseAdmin
-            .from('translated_sections')
-            .insert({
-              translation_id: translationId,
-              original_section_id: section.id,
-              template_id: section.template_id,
-              title: section.title, // Keep original title for now, could be translated if needed
-              data: translatedSectionData,
-              position: section.position,
-              is_active: section.is_active
-            })
-          
-          if (sectionError) {
-            console.error(`❌ Error translating section ${section.id}:`, sectionError)
-            throw sectionError
-          }
-          
-          sectionsTranslated++
-          console.log(`✅ Section ${section.id} translated successfully`)
-          
-        } catch (sectionError) {
-          console.error(`❌ Failed to translate section ${section.id}:`, sectionError)
-          throw sectionError
-        }
-      }
-    }
 
     console.log(`🎉 Comprehensive translation completed successfully for ${languageCode}`)
     console.log(`📊 Results: Main post translated, ${sectionsTranslated} sections translated`)
@@ -594,103 +541,7 @@ function cleanMarkdownFromText(text: string): string {
     .trim()
 }
 
-// Function to translate section data comprehensively
-async function translateSectionData(sectionData: any, languageCode: string): Promise<any> {
-  if (!sectionData) return sectionData
-  
-  console.log(`🔧 Translating section data for language: ${languageCode}`)
-  
-  try {
-    // Recursively find and translate all text content in the section data
-    const translatedData = await translateObjectRecursively(sectionData, languageCode)
-    return translatedData
-  } catch (error) {
-    console.error('❌ Error translating section data:', error)
-    throw error
-  }
-}
-
-// Recursively translate all text content in an object
-async function translateObjectRecursively(obj: any, languageCode: string): Promise<any> {
-  if (!obj) return obj
-  
-  if (typeof obj === 'string') {
-    // Skip translation for very short strings, URLs, or HTML tags only
-    if (obj.length < 3 || obj.startsWith('http') || /^<[^>]+>$/.test(obj.trim())) {
-      return obj
-    }
-    
-    // Translate the text content
-    return await translateTextWithMistral(obj, languageCode)
-  }
-  
-  if (Array.isArray(obj)) {
-    const translatedArray = []
-    for (const item of obj) {
-      translatedArray.push(await translateObjectRecursively(item, languageCode))
-    }
-    return translatedArray
-  }
-  
-  if (typeof obj === 'object') {
-    const translatedObj: any = {}
-    for (const [key, value] of Object.entries(obj)) {
-      translatedObj[key] = await translateObjectRecursively(value, languageCode)
-    }
-    return translatedObj
-  }
-  
-  return obj
-}
-
-// Function to translate individual text snippets
-async function translateTextWithMistral(text: string, languageCode: string): Promise<string> {
-  if (!text || text.length < 3) return text
-  
-  const mistralApiKey = process.env.MISTRAL_API_KEY
-  if (!mistralApiKey) throw new Error('MISTRAL_API_KEY not configured')
-  
-  const targetLanguage = languageMap[languageCode as keyof typeof languageMap]
-  
-  try {
-    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${mistralApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'mistral-large-latest',
-        messages: [
-          {
-            role: 'user',
-            content: `Translate this text to ${targetLanguage}. Preserve HTML tags if any. Respond with ONLY the translated text, no additional formatting or explanation: "${text}"`
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 1000
-      })
-    })
-
-    if (!response.ok) {
-      console.error('Mistral API error for text snippet:', response.statusText)
-      return text // Return original if translation fails
-    }
-
-    const result = await response.json()
-    const translatedText = result.choices[0]?.message?.content?.trim()
-
-    if (!translatedText) {
-      return text // Return original if no translation
-    }
-
-    return cleanMarkdownFromText(translatedText)
-    
-  } catch (error) {
-    console.error('Error translating text snippet:', error)
-    return text // Return original text if translation fails
-  }
-}
+// Section-related functions removed as they're not needed in current schema
 
 // Background processing with comprehensive error handling and retry mechanism
 async function processComprehensiveTranslationBackground(translationId: string, originalPost: any, languageCode: string) {

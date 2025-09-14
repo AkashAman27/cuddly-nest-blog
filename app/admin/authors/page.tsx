@@ -14,16 +14,26 @@ import { AvatarUpload } from '@/components/avatar-upload'
 
 interface Author {
   id: string
-  name: string
-  title: string
+  display_name: string
+  first_name?: string
+  last_name?: string
+  email?: string
+  username?: string
   bio: string
   avatar_url: string
-  countries_explored: string
-  expert_since: string
-  followers: string
-  badges: string[]
+  role?: string
+  social_links?: any
+  is_active?: boolean
+  slug?: string
+  original_wp_id?: number
   created_at?: string
   updated_at?: string
+  // Legacy fields for compatibility
+  title?: string
+  countries_explored?: string
+  expert_since?: string
+  followers?: string
+  badges?: string[]
 }
 
 export default function AuthorsManagement() {
@@ -35,7 +45,7 @@ export default function AuthorsManagement() {
   const defaultAuthors: Author[] = [
     {
       id: 'sarah-johnson',
-      name: 'Sarah Johnson',
+      display_name: 'Sarah Johnson',
       title: 'Travel Expert',
       bio: "Your friendly neighborhood travel obsessive who's been exploring the world for 10+ years. I'm all about finding those hidden gems and sharing the real tea on destinations - no sugar-coating, just honest vibes.",
       avatar_url: '/placeholder.svg',
@@ -46,7 +56,7 @@ export default function AuthorsManagement() {
     },
     {
       id: 'marco-rossi',
-      name: 'Marco Rossi',
+      display_name: 'Marco Rossi',
       title: 'Local Culture Specialist',
       bio: 'Born and raised in Rome, I spend my time uncovering the authentic experiences that make each destination unique. From secret family recipes to hidden historical gems.',
       avatar_url: '/placeholder.svg',
@@ -57,7 +67,7 @@ export default function AuthorsManagement() {
     },
     {
       id: 'elena-santos',
-      name: 'Elena Santos',
+      display_name: 'Elena Santos',
       title: 'Adventure Travel Guide',
       bio: 'Adrenaline junkie turned travel writer. I specialize in off-the-beaten-path adventures and sustainable travel practices that respect local communities.',
       avatar_url: '/placeholder.svg',
@@ -135,7 +145,7 @@ export default function AuthorsManagement() {
         .from('modern_authors')
         .insert(defaultAuthors.map(author => ({
           ...author,
-          display_name: author.name, // Map name to display_name for modern_authors
+          display_name: author.display_name,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })))
@@ -170,7 +180,7 @@ export default function AuthorsManagement() {
         .from('modern_authors')
         .upsert([{
           id: author.id,
-          display_name: author.name,
+          display_name: author.display_name,
           title: author.title,
           bio: author.bio,
           avatar_url: author.avatar_url,
@@ -188,7 +198,7 @@ export default function AuthorsManagement() {
           .from('authors')
           .upsert([{
             id: author.id,
-            name: author.name,
+            display_name: author.display_name,
             title: author.title,
             bio: author.bio,
             avatar_url: author.avatar_url,
@@ -268,7 +278,10 @@ export default function AuthorsManagement() {
     onSave: (author: Author) => void
     onCancel: () => void
   }) => {
-    const [formData, setFormData] = useState(author)
+    const [formData, setFormData] = useState({
+      ...author,
+      badges: author.badges || []
+    })
 
     const updateField = (field: keyof Author, value: any) => {
       setFormData(prev => ({ ...prev, [field]: value }))
@@ -287,11 +300,11 @@ export default function AuthorsManagement() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Author Name</Label>
+              <Label>Display Name</Label>
               <Input
-                value={formData.name}
+                value={formData.display_name}
                 onChange={(e) => {
-                  updateField('name', e.target.value)
+                  updateField('display_name', e.target.value)
                   if (!author.id) {
                     updateField('id', generateAuthorId(e.target.value))
                   }
@@ -313,7 +326,7 @@ export default function AuthorsManagement() {
             <Label>Author Avatar</Label>
             <AvatarUpload
               currentAvatarUrl={formData.avatar_url}
-              authorName={formData.name || 'New Author'}
+              authorName={formData.display_name || 'New Author'}
               onAvatarChange={(newAvatarUrl) => updateField('avatar_url', newAvatarUrl)}
             />
           </div>
@@ -358,7 +371,7 @@ export default function AuthorsManagement() {
           <div>
             <Label>Badges (comma-separated)</Label>
             <Input
-              value={formData.badges.join(', ')}
+              value={formData.badges ? formData.badges.join(', ') : ''}
               onChange={(e) => updateBadges(e.target.value)}
               placeholder="Adventure seeker, Food lover, Culture enthusiast"
             />
@@ -434,15 +447,23 @@ export default function AuthorsManagement() {
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <Avatar className="w-16 h-16">
-                  <AvatarImage src={author.avatar_url} alt={author.name} />
-                  <AvatarFallback>{author.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  <AvatarImage src={author.avatar_url} alt={author.display_name} />
+                  <AvatarFallback>
+                    {author.display_name ? 
+                      author.display_name.split(' ').map(n => n[0]).join('') : 
+                      (author.first_name && author.last_name ? 
+                        (author.first_name[0] + author.last_name[0]) : 
+                        '??'
+                      )
+                    }
+                  </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <h3 className="text-xl font-bold">{author.name}</h3>
-                      <Badge className="text-xs">{author.title}</Badge>
+                      <h3 className="text-xl font-bold">{author.display_name}</h3>
+                      {author.title && <Badge className="text-xs">{author.title}</Badge>}
                     </div>
                     <div className="flex gap-2">
                       <Button 
@@ -467,22 +488,28 @@ export default function AuthorsManagement() {
                   <p className="text-sm text-gray-600 mb-3 line-clamp-2">{author.bio}</p>
                   
                   <div className="flex flex-wrap gap-2 text-xs mb-3">
-                    <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
-                      <MapPin className="w-3 h-3" />
-                      <span>{author.countries_explored}</span>
-                    </div>
-                    <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>{author.expert_since}</span>
-                    </div>
-                    <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
-                      <Users className="w-3 h-3" />
-                      <span>{author.followers}</span>
-                    </div>
+                    {author.countries_explored && (
+                      <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{author.countries_explored}</span>
+                      </div>
+                    )}
+                    {author.expert_since && (
+                      <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{author.expert_since}</span>
+                      </div>
+                    )}
+                    {author.followers && (
+                      <div className="flex items-center gap-1 bg-purple-100 rounded-full px-2 py-1">
+                        <Users className="w-3 h-3" />
+                        <span>{author.followers}</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex flex-wrap gap-1">
-                    {author.badges.map((badge, index) => (
+                    {author.badges && author.badges.map((badge, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {badge}
                       </Badge>

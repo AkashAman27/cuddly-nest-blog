@@ -31,15 +31,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the original post with sections
+    // Get the original post (sections table doesn't exist in current schema)
     const { data: originalPost, error: postError } = await supabaseAdmin
       .from('cuddly_nest_modern_post')
-      .select(`
-        *,
-        sections:modern_post_sections(
-          id, template_id, title, data, position, is_active
-        )
-      `)
+      .select('*')
       .eq('id', postId)
       .single()
 
@@ -53,8 +48,8 @@ export async function POST(request: NextRequest) {
     
     console.log('Original post found:', { 
       title: originalPost.title,
-      sectionsCount: originalPost.sections?.length || 0,
-      hasContent: !!originalPost.content
+      hasContent: !!originalPost.content,
+      contentLength: originalPost.content?.length || 0
     })
 
     const translationResults = []
@@ -131,26 +126,15 @@ export async function POST(request: NextRequest) {
 async function translatePostContent(originalPost: any, languageCode: string, existingTranslationId?: string) {
   console.log(`🔄 Translating content for ${languageCode}`)
   
-  // Extract content from sections for template posts
+  // Use the main content field directly (no sections in current schema)
   let contentToTranslate = originalPost.content || ''
-  
-  if (originalPost.template_enabled && originalPost.sections) {
-    // Find main content section
-    const contentSection = originalPost.sections.find(s => 
-      s.template_id === 'e30d9e40-eb3a-41d3-aeac-413cfca52fe0' || 
-      s.data?.content
-    )
-    
-    if (contentSection?.data?.content) {
-      contentToTranslate = contentSection.data.content
-      console.log(`📄 Found main content section: ${contentToTranslate.length} chars`)
-    }
-  }
   
   if (!contentToTranslate) {
     console.log('⚠️ No content found to translate, using title and excerpt only')
     contentToTranslate = `${originalPost.title}\n\n${originalPost.excerpt || ''}`
   }
+  
+  console.log(`📄 Content to translate: ${contentToTranslate.length} chars`)
   
   try {
     // Translate key fields

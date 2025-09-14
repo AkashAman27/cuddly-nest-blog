@@ -121,7 +121,7 @@ export default function PostsPage() {
         ...(searchQuery.trim() && { search: searchQuery.trim() })
       })
       
-      const response = await fetch(`/api/admin/posts?${searchParams}`)
+      const response = await fetch(`/api/admin/posts-simple?${searchParams}`)
       if (!response.ok) {
         throw new Error('Failed to fetch posts')
       }
@@ -133,7 +133,7 @@ export default function PostsPage() {
       
       // Get total counts from API if needed, for now use the returned data
       // We need to fetch total counts separately as this page might be filtered
-      const allResponse = await fetch('/api/admin/posts?limit=1')
+      const allResponse = await fetch('/api/admin/posts-simple?limit=1')
       const allData = await allResponse.json()
       
       // Calculate counts for filter tabs
@@ -318,7 +318,7 @@ export default function PostsPage() {
     try {
       setIsSaving(true)
       
-      const response = await fetch(`/api/admin/posts/${quickEditPost.id}`, {
+      const response = await fetch(`/api/admin/posts-simple?id=${quickEditPost.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -65,6 +65,8 @@ export default function EditTranslationPage() {
   const [saving, setSaving] = useState(false)
   const [translationData, setTranslationData] = useState<TranslationData | null>(null)
   const [originalPost, setOriginalPost] = useState<OriginalPostData | null>(null)
+  const [availablePosts, setAvailablePosts] = useState<any[]>([])
+  const [showMigrationHelper, setShowMigrationHelper] = useState(false)
   
   // Language mappings
   const languageMap: { [key: string]: { name: string, flag: string } } = {
@@ -89,16 +91,46 @@ export default function EditTranslationPage() {
 
       setTranslationData(translation)
 
-      // Fetch original post data
-      const { data: originalPostData, error: originalError } = await supabase
-        .from('cuddly_nest_modern_post')
-        .select('id, title, excerpt, content, slug')
-        .eq('id', translation.original_post_id)
-        .single()
+      // Fetch original post data - handle migration scenario
+      let originalPostData = null
+      if (translation.original_post_id) {
+        const { data, error: originalError } = await supabase
+          .from('cuddly_nest_modern_post')
+          .select('id, title, excerpt, content, slug')
+          .eq('id', translation.original_post_id)
+          .single()
 
-      if (originalError) throw originalError
+        if (originalError) {
+          console.warn('Could not find original post:', originalError)
+          // Set a placeholder for migration
+          originalPostData = {
+            id: translation.original_post_id,
+            title: '[NEEDS MIGRATION] Original post not found',
+            excerpt: 'This translation needs to be migrated to a new post.',
+            content: '',
+            slug: 'migration-needed'
+          }
+        } else {
+          originalPostData = data
+        }
+      } else {
+        // Handle migration scenario where original_post_id is NULL
+        originalPostData = {
+          id: translation.old_original_post_id || 'unknown',
+          title: '[MIGRATION NEEDED] ' + (translation.translated_title || 'Unknown Post'),
+          excerpt: 'This translation references an old post system and needs to be migrated.',
+          content: '',
+          slug: 'migration-needed'
+        }
+      }
 
       setOriginalPost(originalPostData)
+
+      // Check if migration is needed and fetch available posts
+      if (!translation.original_post_id) {
+        setShowMigrationHelper(true)
+        await fetchAvailablePosts()
+      }
 
     } catch (error) {
       console.error('Error fetching translation data:', error)
@@ -106,6 +138,51 @@ export default function EditTranslationPage() {
       router.push('/admin/posts')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAvailablePosts = async () => {
+    try {
+      const { data: posts, error } = await supabase
+        .from('cuddly_nest_modern_post')
+        .select('id, title, slug, status')
+        .eq('status', 'published')
+        .order('title', { ascending: true })
+        .limit(50)
+
+      if (error) throw error
+      setAvailablePosts(posts || [])
+    } catch (error) {
+      console.error('Error fetching available posts:', error)
+    }
+  }
+
+  const handleMigrateToPost = async (postId: string) => {
+    if (!translationData) return
+
+    try {
+      setSaving(true)
+      
+      const { error } = await supabase
+        .from('post_translations')
+        .update({ 
+          original_post_id: postId,
+          needs_migration: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', translationId)
+
+      if (error) throw error
+
+      toast.success('Translation successfully migrated to new post!')
+      setShowMigrationHelper(false)
+      await fetchTranslationData() // Refresh data
+      
+    } catch (error) {
+      console.error('Error migrating translation:', error)
+      toast.error('Failed to migrate translation')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -287,6 +364,48 @@ export default function EditTranslationPage() {
           </div>
         </div>
 
+        {/* Migration Helper */}
+        {showMigrationHelper && (
+          <div className="mb-6">
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <strong>Migration Required:</strong> This translation needs to be linked to a current post.
+                    The original post reference was lost during the system migration.
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">Select the correct post for this translation:</label>
+                    <Select onValueChange={handleMigrateToPost} disabled={saving}>
+                      <SelectTrigger className="w-full bg-white">
+                        <SelectValue placeholder="Choose a post..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availablePosts.map((post) => (
+                          <SelectItem key={post.id} value={post.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{post.title}</span>
+                              <span className="text-xs text-muted-foreground">/{post.slug}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {availablePosts.length === 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      Loading available posts...
+                    </div>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Original Content */}
           <div className="space-y-4">
@@ -405,7 +524,7 @@ export default function EditTranslationPage() {
             </CardHeader>
             <CardContent>
               <RichTextEditor
-                initialValue={translationData.translated_content}
+                content={translationData.translated_content}
                 onChange={(content) => setTranslationData(prev => prev ? ({
                   ...prev,
                   translated_content: content

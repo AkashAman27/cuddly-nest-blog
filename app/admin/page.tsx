@@ -143,31 +143,51 @@ export default function AdminDashboard() {
     try {
       setLoading(true)
       
-      // Get post counts
-      const { data: allPosts, error: postsError } = await supabase
+      // Get total post count
+      const { count: totalPostsCount, error: totalCountError } = await supabase
+        .from('cuddly_nest_modern_post')
+        .select('*', { count: 'exact', head: true })
+      
+      if (totalCountError) throw totalCountError
+
+      // Get published post count
+      const { count: publishedCount, error: publishedCountError } = await supabase
+        .from('cuddly_nest_modern_post')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'published')
+      
+      if (publishedCountError) throw publishedCountError
+
+      // Get draft post count
+      const { count: draftCount, error: draftCountError } = await supabase
+        .from('cuddly_nest_modern_post')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'draft')
+      
+      if (draftCountError) throw draftCountError
+
+      // Get recent posts (limited to 5 for display)
+      const { data: recentPosts, error: recentPostsError } = await supabase
         .from('cuddly_nest_modern_post')
         .select('id, title, slug, status, created_at')
         .order('created_at', { ascending: false })
+        .limit(5)
       
-      if (postsError) throw postsError
+      if (recentPostsError) throw recentPostsError
 
       // Get author count
-      const { data: authors, error: authorsError } = await supabase
-        .from('authors')
-        .select('id', { count: 'exact' })
+      const { count: authorsCount, error: authorsError } = await supabase
+        .from('modern_authors')
+        .select('*', { count: 'exact', head: true })
       
       if (authorsError) throw authorsError
 
-      const allPostsData = allPosts || []
-      const publishedCount = allPostsData.filter(p => p.status === 'published').length
-      const draftCount = allPostsData.filter(p => p.status === 'draft').length
-
       setStats({
-        totalPosts: allPostsData.length,
-        publishedPosts: publishedCount,
-        draftPosts: draftCount,
-        totalAuthors: authors?.length || 0,
-        recentPosts: allPostsData.slice(0, 5)
+        totalPosts: totalPostsCount || 0,
+        publishedPosts: publishedCount || 0,
+        draftPosts: draftCount || 0,
+        totalAuthors: authorsCount || 0,
+        recentPosts: recentPosts || []
       })
     } catch (error) {
       console.error('Error loading dashboard stats:', error)

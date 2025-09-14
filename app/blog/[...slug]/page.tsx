@@ -160,55 +160,8 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
         hasContent: !!simplifiedPost.content
       })
       
-      // Convert simplified post to article format for existing BlogArticleTemplate
-      try {
-        const articleData = convertAnyPostToArticle(simplifiedPost)
-        
-        const simplifiedJsonLd = {
-          '@context': 'https://schema.org',
-          '@type': 'Article',
-          headline: simplifiedPost.title,
-          description: simplifiedPost.excerpt || simplifiedPost.meta_description || '',
-          image: simplifiedPost.featured_image_url || '',
-          datePublished: simplifiedPost.published_at || simplifiedPost.created_at,
-          dateModified: simplifiedPost.updated_at,
-          author: {
-            '@type': 'Person',
-            name: simplifiedPost.author?.display_name || 'CuddlyNest Team',
-          },
-          publisher: {
-            '@type': 'Organization',
-            name: 'CuddlyNest',
-            logo: {
-              '@type': 'ImageObject',
-              url: 'https://cuddlynest.com/logo.png',
-            },
-          },
-          mainEntityOfPage: {
-            '@type': 'WebPage',
-            '@id': `https://cuddlynest.com/blog/${fullSlug}`,
-          },
-          articleSection: 'Travel Guide',
-          keywords: simplifiedPost.seo_keywords || `travel, ${simplifiedPost.title}`,
-        }
-
-        // Use your existing beautiful BlogArticleTemplate with simplified data
-        return (
-          <>
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(simplifiedJsonLd) }}
-            />
-            <BlogArticleTemplate 
-              article={articleData} 
-              availableTranslations={[]} 
-            />
-          </>
-        )
-      } catch (error) {
-        console.error('Error converting simplified post:', error)
-        // Continue to fallback systems
-      }
+      // Set post for translation logic below
+      post = simplifiedPost
     }
   }
 
@@ -222,7 +175,7 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
         .from('post_translations')
         .select(`
           *,
-          original_post:modern_posts!inner(*)
+          original_post:cuddly_nest_modern_post!inner(*)
         `)
         .eq('language_code', language)
         .eq('translated_slug', lookupSlug)
@@ -372,33 +325,7 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
     console.error('Error fetching starter pack data:', error)
   }
 
-  // Inject starter pack data into relevant sections
-  if (starterPackData && translatedPost.sections) {
-    try {
-      translatedPost.sections = translatedPost.sections.map(section => {
-        // Find starter pack or overview intro sections
-        const isStarterPackSection = 
-          section.template_id === 'b87245be-1b68-47d4-83a6-fac582a0847f' || // StarterPackSection
-          section.template_id === '8642ef7e-6198-4cd4-b0f9-8ba6bb868951' || // OverviewIntro
-          section.template_id === 'overview-intro' ||
-          section.template_id === 'starter-pack-section'
-
-        if (isStarterPackSection) {
-          return {
-            ...section,
-            data: {
-              ...section.data,
-              starterPackData: starterPackData
-            }
-          }
-        }
-        
-        return section
-      })
-    } catch (error) {
-      console.error('Error injecting starter pack data:', error)
-    }
-  }
+  // Note: Starter pack data injection removed since we no longer use sections
 
   // For legacy posts, use the universal converter
   if (isLegacyPost && legacyPost) {
@@ -517,11 +444,10 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
 
   // For any remaining section-based or modern posts, use universal converter
   try {
-    console.log('🔄 Converting remaining post using universal converter:', {
+    console.log('🔄 Converting post using universal converter:', {
       id: translatedPost.id,
       title: translatedPost.title,
-      hasSections: !!(translatedPost.sections && translatedPost.sections.length > 0),
-      type: translatedPost.sections?.length > 0 ? 'section-based' : 'modern'
+      type: 'modern'
     })
     
     const articleData = convertAnyPostToArticle(translatedPost)

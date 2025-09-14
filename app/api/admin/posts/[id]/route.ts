@@ -6,10 +6,7 @@ import { commonSchemas } from '@/lib/security/validation'
 export const GET = createSecureRoute(async ({ query }, { params }: { params: { id: string } }) => {
   const { data: post, error } = await supabaseAdmin
     .from('cuddly_nest_modern_post')
-    .select(`
-      *,
-      sections:modern_post_sections(*)
-    `)
+    .select('*')
     .eq('id', params.id)
     .single()
 
@@ -23,12 +20,12 @@ export const GET = createSecureRoute(async ({ query }, { params }: { params: { i
     throw error
   }
 
-  // Transform the data
+  // Transform the data (no sections needed)
   const transformedPost = {
     ...post,
     categories: post.categories || [],
     tags: post.tags || [],
-    sections: post.sections?.sort((a, b) => a.position - b.position) || []
+    sections: [] // No longer using sections
   }
 
   return NextResponse.json(transformedPost)

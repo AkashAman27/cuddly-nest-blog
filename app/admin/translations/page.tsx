@@ -31,7 +31,9 @@ import { toast } from 'sonner'
 
 interface Translation {
   id: string
-  original_post_id: string
+  original_post_id: string | null
+  old_original_post_id?: string
+  needs_migration?: boolean
   language_code: string
   translated_title: string
   translated_excerpt: string
@@ -51,7 +53,7 @@ interface Translation {
     author: {
       display_name: string
     }
-  }
+  } | null
 }
 
 export default function TranslationsPage() {
@@ -81,11 +83,12 @@ export default function TranslationsPage() {
     try {
       setLoading(true)
       
+      // Fetch translations with left join to handle migration scenario
       const { data, error } = await supabase
         .from('post_translations')
         .select(`
           *,
-          original_post:modern_posts!inner(
+          original_post:cuddly_nest_modern_post(
             id,
             title,
             slug,
@@ -139,7 +142,7 @@ export default function TranslationsPage() {
   const filteredTranslations = translations.filter(translation => {
     const matchesSearch = searchQuery === '' || 
       translation.translated_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      translation.original_post.title.toLowerCase().includes(searchQuery.toLowerCase())
+      (translation.original_post?.title || '').toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || translation.translation_status === statusFilter
     const matchesLanguage = languageFilter === 'all' || translation.language_code === languageFilter
@@ -504,10 +507,21 @@ export default function TranslationsPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{translation.original_post.title}</div>
-                            <div className="text-sm text-muted-foreground">
-                              by {translation.original_post.author?.display_name || 'Unknown'}
-                            </div>
+                            {translation.original_post ? (
+                              <>
+                                <div className="font-medium">{translation.original_post.title}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  by {translation.original_post.author?.display_name || 'Unknown'}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="font-medium text-amber-600">[NEEDS MIGRATION]</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Original post reference lost
+                                </div>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                         

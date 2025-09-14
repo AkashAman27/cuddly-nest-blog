@@ -81,6 +81,14 @@ export interface BlogArticleData {
     tips: string[]
   }>
   starter_pack_data?: any
+  ctas?: Array<{
+    id: string
+    title: string
+    description?: string
+    button_text: string
+    button_link: string
+    position: number
+  }>
 }
 
 // Section type mapping for conversion
@@ -275,8 +283,8 @@ function convertSectionBasedPost(post: any): BlogArticleData {
     og_image: {
       file_url: post.og_image?.file_url || post.featured_image_url || ''
     },
-    featured_image: post.og_image ? {
-      file_url: post.og_image.file_url
+    featured_image: (post.og_image || post.featured_image_url) ? {
+      file_url: post.og_image?.file_url || post.featured_image_url || ''
     } : undefined,
     content: articleContent,
     faqs: extractedFAQs.length > 0 ? extractedFAQs : undefined,
@@ -287,7 +295,15 @@ function convertSectionBasedPost(post: any): BlogArticleData {
     itinerary: extractedItinerary.length > 0 ? extractedItinerary : undefined,
     budget_info: budgetInfo,
     travel_tips: travelTips.length > 0 ? travelTips : undefined,
-    starter_pack_data: starterPackData
+    starter_pack_data: starterPackData,
+    ctas: post.ctas ? post.ctas.map((cta: any) => ({
+      id: cta.id,
+      title: cta.title,
+      description: cta.description,
+      button_text: cta.button_text,
+      button_link: cta.button_link,
+      position: cta.position
+    })) : undefined
   }
 }
 
@@ -314,9 +330,20 @@ function convertLegacyPost(post: any): BlogArticleData {
     og_image: {
       file_url: post.featured_image_url || ''
     },
+    featured_image: post.featured_image_url ? {
+      file_url: post.featured_image_url
+    } : undefined,
     content: post.content || '',
     status: post.status,
-    categories: post.categories
+    categories: post.categories,
+    ctas: post.ctas ? post.ctas.map((cta: any) => ({
+      id: cta.id,
+      title: cta.title,
+      description: cta.description,
+      button_text: cta.button_text,
+      button_link: cta.button_link,
+      position: cta.position
+    })) : undefined
   }
 }
 
@@ -343,12 +370,20 @@ function convertModernPost(post: any): BlogArticleData {
     og_image: {
       file_url: post.og_image?.file_url || post.featured_image_url || ''
     },
-    featured_image: post.og_image ? {
-      file_url: post.og_image.file_url
+    featured_image: (post.og_image || post.featured_image_url) ? {
+      file_url: post.og_image?.file_url || post.featured_image_url || ''
     } : undefined,
     content: post.content || '',
     status: post.status,
-    categories: post.categories
+    categories: post.categories,
+    ctas: post.ctas ? post.ctas.map((cta: any) => ({
+      id: cta.id,
+      title: cta.title,
+      description: cta.description,
+      button_text: cta.button_text,
+      button_link: cta.button_link,
+      position: cta.position
+    })) : undefined
   }
 }
 

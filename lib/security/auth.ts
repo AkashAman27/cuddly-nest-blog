@@ -54,9 +54,24 @@ async function verifyToken(token: string): Promise<User | null> {
       return null
     }
     
-    // Get user role and permissions from user metadata or a separate table
-    const role = user.user_metadata?.role || user.app_metadata?.role || 'user'
-    const permissions = user.user_metadata?.permissions || user.app_metadata?.permissions || []
+    // Get user role and permissions from user_profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('role, permissions')
+      .eq('id', user.id)
+      .single()
+    
+    const role = profile?.role || user.user_metadata?.role || user.app_metadata?.role || 'user'
+    const permissions = profile?.permissions || user.user_metadata?.permissions || user.app_metadata?.permissions || []
+    
+    console.log('🔍 Auth Debug:', {
+      userId: user.id,
+      email: user.email,
+      profileData: profile,
+      finalRole: role,
+      userMetadataRole: user.user_metadata?.role,
+      appMetadataRole: user.app_metadata?.role
+    })
     
     return {
       id: user.id,
@@ -95,7 +110,13 @@ export async function requireAuth(request: NextRequest): Promise<AuthContext> {
 export async function requireAdmin(request: NextRequest): Promise<AuthContext> {
   const authContext = await requireAuth(request)
   
-  if (authContext.user.role !== 'admin' && authContext.user.role !== 'superadmin') {
+  console.log('🚀 Admin Check:', {
+    userRole: authContext.user.role,
+    allowedRoles: ['admin', 'superadmin', 'super_admin'],
+    isAllowed: ['admin', 'superadmin', 'super_admin'].includes(authContext.user.role)
+  })
+  
+  if (!['admin', 'superadmin', 'super_admin'].includes(authContext.user.role)) {
     throw errors.forbidden('Admin access required')
   }
   
@@ -109,7 +130,7 @@ export async function requirePermission(request: NextRequest, permission: string
   const authContext = await requireAuth(request)
   
   // Superadmin has all permissions
-  if (authContext.user.role === 'superadmin') {
+  if (['superadmin', 'super_admin'].includes(authContext.user.role)) {
     return authContext
   }
   
@@ -125,7 +146,7 @@ export async function requirePermission(request: NextRequest, permission: string
  * Check if user has permission without throwing
  */
 export function hasPermission(user: User, permission: string): boolean {
-  if (user.role === 'superadmin') {
+  if (['superadmin', 'super_admin'].includes(user.role)) {
     return true
   }
   

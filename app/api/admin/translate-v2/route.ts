@@ -46,17 +46,7 @@ export async function POST(request: NextRequest) {
       .from('cuddly_nest_modern_post')
       .select(`
         *,
-        author:modern_authors(display_name, bio, avatar_url, social_links),
-        sections:modern_post_sections(
-          id,
-          template_id,
-          title,
-          data,
-          position,
-          is_active,
-          created_at,
-          updated_at
-        )
+        author:modern_authors(display_name, bio, avatar_url, social_links)
       `)
       .eq('id', postId)
       .single()
@@ -222,37 +212,8 @@ async function processSimplifiedTranslation(originalPost: any, languageCode: str
       translatedPostId = newPost.id
     }
     
-    // Step 4: Copy and translate sections (if any)
-    if (originalPost.sections && originalPost.sections.length > 0) {
-      console.log(`🔧 Copying and translating ${originalPost.sections.length} sections...`)
-      
-      // Clear existing sections for this translated post
-      await supabaseAdmin
-        .from('modern_post_sections')
-        .delete()
-        .eq('post_id', translatedPostId)
-      
-      // Copy and translate each section
-      for (const section of originalPost.sections) {
-        const translatedSectionData = await translateSectionDataSimple(section.data, languageCode)
-        
-        const { error: sectionError } = await supabaseAdmin
-          .from('modern_post_sections')
-          .insert({
-            post_id: translatedPostId,
-            template_id: section.template_id,
-            title: section.title, // Keep original title or translate if needed
-            data: translatedSectionData,
-            position: section.position,
-            is_active: section.is_active
-          })
-        
-        if (sectionError) {
-          console.error(`❌ Error copying section ${section.id}:`, sectionError)
-          // Don't throw here, continue with other sections
-        }
-      }
-    }
+    // Note: Section-based copying not needed in current schema
+    console.log(`✅ Main post translation completed`)
 
     console.log(`🎉 Simplified translation completed successfully for ${languageCode}`)
 

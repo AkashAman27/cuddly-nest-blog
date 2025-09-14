@@ -36,12 +36,6 @@ const navigationItems = [
     href: '/admin/posts'
   },
   {
-    id: 'simple-posts',
-    label: 'Simple Posts',
-    icon: BookOpen,
-    href: '/admin/simple-posts'
-  },
-  {
     id: 'authors',
     label: 'Authors',
     icon: User,

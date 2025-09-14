@@ -61,8 +61,6 @@ interface PostData {
   categories: string[] // Category IDs
   tags: string[]
   publish_date: string
-  template_enabled: boolean
-  template_type: string
 }
 
 export default function NewPostPage() {
@@ -81,9 +79,7 @@ export default function NewPostPage() {
     seo_description: '',
     categories: [],
     tags: [],
-    publish_date: '',
-    template_enabled: false,
-    template_type: ''
+    publish_date: ''
   })
   
   const [newTag, setNewTag] = useState('')
@@ -159,8 +155,6 @@ export default function NewPostPage() {
         meta_description: postData.seo_description.trim() || '',
         seo_title: postData.seo_title || postData.title,
         seo_description: postData.seo_description.trim() || '',
-        template_enabled: postData.template_enabled || false,
-        template_type: postData.template_type || null,
         created_at: now,
         updated_at: now,
         published_at: status === 'published' ? (postData.publish_date || now) : null,
@@ -511,31 +505,7 @@ export default function NewPostPage() {
                   />
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="template_enabled"
-                    checked={postData.template_enabled}
-                    onCheckedChange={(checked) => setPostData(prev => ({ ...prev, template_enabled: checked }))}
-                  />
-                  <Label htmlFor="template_enabled">Enable Template System</Label>
-                </div>
-
-                {postData.template_enabled && (
-                  <div>
-                    <Label htmlFor="template_type">Template Type</Label>
-                    <Select value={postData.template_type} onValueChange={(value) => setPostData(prev => ({ ...prev, template_type: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select template" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="travel_guide">Travel Guide</SelectItem>
-                        <SelectItem value="blog_post">Blog Post</SelectItem>
-                        <SelectItem value="review">Review</SelectItem>
-                        <SelectItem value="listicle">Listicle</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                {/* Template system removed - no longer supported */}
               </CardContent>
             </Card>
 

@@ -133,11 +133,10 @@ export default function EditPostPage() {
   const [newTag, setNewTag] = useState('')
   const DEFAULT_RICH_TEXT_TEMPLATE = 'e30d9e40-eb3a-41d3-aeac-413cfca52fe0'
   const CTA_TEMPLATE = 'cta-template-id'
-  const [sectionContent, setSectionContent] = useState('')
-  const [loadingSectionContent, setLoadingSectionContent] = useState(false)
-  const [savingSectionContent, setSavingSectionContent] = useState(false)
-  const [sectionContentSaveTimeout, setSectionContentSaveTimeout] = useState<NodeJS.Timeout | null>(null)
-  const latestSectionContentRef = useRef(sectionContent)
+  // Section content states removed - no longer using modern_post_sections
+  
+  // Rich text editor state
+  const [contentEditorMode, setContentEditorMode] = useState<'visual' | 'html'>('visual')
   
   // CTA state
   const [ctaData, setCtaData] = useState({
@@ -147,6 +146,7 @@ export default function EditPostPage() {
     link: '',
     position: 'mid-content'
   })
+  const [currentCtas, setCurrentCtas] = useState<any[]>([])
 
   // Internal Links state
   const [newInternalLink, setNewInternalLink] = useState({
@@ -167,139 +167,43 @@ export default function EditPostPage() {
     display_order: 1
   })
 
-  const fetchSectionContent = useCallback(async (postId: string) => {
+  // Section content functions removed - no longer using modern_post_sections
+
+  // Section content update function removed - no longer using modern_post_sections
+
+  // Debounced save function removed - no longer using modern_post_sections
+
+  // Cleanup timeout code removed - no longer using sections
+
+  const fetchCtas = useCallback(async () => {
+    if (!postId) return
+    
     try {
-      setLoadingSectionContent(true)
-      const { data: sections, error } = await supabase
-        .from('modern_post_sections')
-        .select('id, template_id, data, position')
-        .eq('post_id', postId)
-        .eq('template_id', DEFAULT_RICH_TEXT_TEMPLATE)
-        .order('position')
-
-      if (error) throw error
-
-      // Combine all rich text section content
-      if (sections && sections.length > 0) {
-        const combinedContent = sections
-          .map(section => section.data?.content || '')
-          .filter(content => content.trim().length > 0)
-          .join('\n\n')
-        setSectionContent(combinedContent)
-        latestSectionContentRef.current = combinedContent
-      } else {
-        setSectionContent('')
-        latestSectionContentRef.current = ''
+      const response = await fetch(`/api/admin/ctas?post_id=${postId}`)
+      if (response.ok) {
+        const ctas = await response.json()
+        setCurrentCtas(ctas)
       }
     } catch (error) {
-      console.error('Error fetching section content:', error)
-      setSectionContent('')
-    } finally {
-      setLoadingSectionContent(false)
+      console.error('Error fetching CTAs:', error)
     }
-  }, [])
-
-  const updateSectionContent = useCallback(async (postId: string, content: string, showToast = true) => {
-    try {
-      setSavingSectionContent(true)
-      // Find existing rich text section or create one
-      const { data: existingSections, error: fetchError } = await supabase
-        .from('modern_post_sections')
-        .select('id')
-        .eq('post_id', postId)
-        .eq('template_id', DEFAULT_RICH_TEXT_TEMPLATE)
-        .order('position')
-        .limit(1)
-
-      if (fetchError) throw fetchError
-
-      if (existingSections && existingSections.length > 0) {
-        // Update existing section
-        const { error: updateError } = await supabase
-          .from('modern_post_sections')
-          .update({ 
-            data: { content },
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingSections[0].id)
-
-        if (updateError) throw updateError
-      } else {
-        // Create new section
-        const { error: insertError } = await supabase
-          .from('modern_post_sections')
-          .insert({
-            post_id: postId,
-            template_id: DEFAULT_RICH_TEXT_TEMPLATE,
-            data: { content },
-            position: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-
-        if (insertError) throw insertError
-      }
-      
-      if (showToast) {
-        toast.success('Content saved successfully')
-      }
-    } catch (error) {
-      console.error('Error updating section content:', error)
-      if (showToast) {
-        toast.error('Failed to save content')
-      }
-      throw error
-    } finally {
-      setSavingSectionContent(false)
-    }
-  }, [])
-
-  const debouncedSaveSectionContent = useCallback((content: string) => {
-    // Clear existing timeout
-    if (sectionContentSaveTimeout) {
-      clearTimeout(sectionContentSaveTimeout)
-    }
-    
-    // Set new timeout for auto-save
-    const timeoutId = setTimeout(async () => {
-      try {
-        // Save without updating the state to prevent re-renders
-        await updateSectionContent(postId, content, false) // Don't show toast for auto-save
-      } catch (error) {
-        // Error already handled in updateSectionContent
-      }
-    }, 2000) // Increased to 2 seconds to reduce API calls
-    
-    setSectionContentSaveTimeout(timeoutId)
-  }, [sectionContentSaveTimeout, postId, updateSectionContent])
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (sectionContentSaveTimeout) {
-        clearTimeout(sectionContentSaveTimeout)
-      }
-    }
-  }, [sectionContentSaveTimeout])
+  }, [postId])
 
   const fetchPost = useCallback(async () => {
     try {
       setLoading(true)
-      const { data: post, error } = await supabase
-        .from('cuddly_nest_modern_post')
-        .select(`
-          *,
-          sections:modern_post_sections(*)
-        `)
-        .eq('id', postId)
-        .single()
-
-      if (error) throw error
-      if (!post) {
-        toast.error('Post not found')
-        router.push('/admin/posts')
-        return
+      const response = await fetch(`/api/admin/posts-simple/${postId}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast.error('Post not found')
+          router.push('/admin/posts')
+          return
+        }
+        throw new Error('Failed to fetch post')
       }
+      
+      const post = await response.json()
 
       const postWithDefaults = {
         ...post,
@@ -329,8 +233,7 @@ export default function EditPostPage() {
       setOriginalData(postWithDefaults)
       setLastSaved(new Date(post.updated_at))
       
-      // Also fetch the rich text section content
-      await fetchSectionContent(postId)
+      // No longer fetching section content
     } catch (error) {
       console.error('Error fetching post:', error)
       toast.error('Failed to load post')
@@ -338,7 +241,7 @@ export default function EditPostPage() {
     } finally {
       setLoading(false)
     }
-  }, [postId, router, fetchSectionContent])
+  }, [postId, router])
 
   const fetchAuthors = async () => {
     try {
@@ -393,8 +296,9 @@ export default function EditPostPage() {
       fetchPost()
       fetchAuthors()
       fetchTranslations()
+      fetchCtas()
     }
-  }, [postId, fetchPost])
+  }, [postId, fetchPost, fetchCtas])
 
   // Validate author ID after both post and authors are loaded
   useEffect(() => {
@@ -469,23 +373,18 @@ export default function EditPostPage() {
       title: postData.title.trim(),
       slug: postData.slug.trim(),
       excerpt: (postData.excerpt || '').trim(),
-      content: postData.content,
+      content: postData.content || '',
       status,
       featured_image_url: postData.featured_image_url || null,
       author_id: postData.author_id,
       seo_title: (postData.seo_title || postData.title).trim(),
       seo_description: (postData.seo_description || '').trim(),
-      categories: postData.categories,
-      tags: postData.tags,
-      faq_items: postData.faqs,
-      internal_links: postData.internal_links,
-      template_enabled: postData.template_enabled,
-      template_type: postData.template_type || null,
     }
     
+    console.log('Updating post with ID:', postId)
     console.log('Sending update payload:', payload)
 
-    const resp = await fetch(`/api/admin/posts/${postId}`, {
+    const resp = await fetch(`/api/admin/posts-simple/${postId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -496,7 +395,10 @@ export default function EditPostPage() {
     
     try {
       responseText = await resp.text()
-      result = JSON.parse(responseText)
+      console.log('Raw response text:', responseText)
+      if (responseText) {
+        result = JSON.parse(responseText)
+      }
     } catch (parseError) {
       console.error('Failed to parse response:', parseError)
       console.error('Response status:', resp.status)
@@ -511,7 +413,15 @@ export default function EditPostPage() {
         payload,
         responseText
       })
-      throw new Error(result?.error || `Failed to save post (${resp.status}: ${resp.statusText})`)
+      
+      let errorMessage = `Failed to save post (${resp.status}: ${resp.statusText})`
+      if (result?.error) {
+        errorMessage = result.error
+      } else if (responseText && responseText !== '{}') {
+        errorMessage = `Server returned: ${responseText}`
+      }
+      
+      throw new Error(errorMessage)
     }
 
     // Update original data to reflect saved state
@@ -553,7 +463,7 @@ export default function EditPostPage() {
     }
 
     try {
-      const resp = await fetch(`/api/admin/posts/${postId}`, { method: 'DELETE' })
+      const resp = await fetch(`/api/admin/posts-simple/${postId}`, { method: 'DELETE' })
       if (!resp.ok) throw new Error('Failed to delete post')
       toast.success('Post deleted successfully')
       router.push('/admin/posts')
@@ -636,6 +546,7 @@ export default function EditPostPage() {
     }) : null)
   }
 
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -666,55 +577,37 @@ export default function EditPostPage() {
   }
 
   const handleAddCTA = async () => {
-    if (!postData || !ctaData.title || !ctaData.buttonText) {
-      toast.error('Please fill in CTA title and button text')
+    if (!postData || !ctaData.title || !ctaData.buttonText || !ctaData.link) {
+      toast.error('Please fill in CTA title, button text, and link')
       return
     }
 
     try {
       const positionMap = {
         'after-intro': 1,
-        'mid-content': Math.floor((postData.sections?.length || 1) / 2) + 1,
-        'before-conclusion': (postData.sections?.length || 1) - 1,
-        'end-content': (postData.sections?.length || 0) + 1
+        'mid-content': 2,
+        'before-conclusion': 3,
+        'end-content': 4
       }
 
-      const ctaContent = `
-        <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8 text-white text-center my-8">
-          <h3 class="text-2xl font-bold mb-4">${ctaData.title}</h3>
-          ${ctaData.description ? `<p class="text-blue-100 mb-6 text-lg">${ctaData.description}</p>` : ''}
-          <a href="${ctaData.link}" class="inline-block bg-white text-blue-600 px-8 py-3 rounded-full font-semibold text-lg hover:bg-blue-50 transition-colors">
-            ${ctaData.buttonText}
-          </a>
-        </div>
-      `
-
-      const resp = await fetch('/api/admin/sections', {
+      const resp = await fetch('/api/admin/ctas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           post_id: postData.id,
-          template_id: CTA_TEMPLATE,
-          data: { 
-            title: ctaData.title,
-            content: ctaContent,
-            type: 'cta',
-            buttonText: ctaData.buttonText,
-            link: ctaData.link,
-            description: ctaData.description
-          },
-          position: positionMap[ctaData.position as keyof typeof positionMap] || 1
+          title: ctaData.title,
+          description: ctaData.description || null,
+          button_text: ctaData.buttonText,
+          button_link: ctaData.link,
+          position: positionMap[ctaData.position as keyof typeof positionMap] || 2
         })
       })
 
       if (!resp.ok) throw new Error('Failed to create CTA')
 
-      const created = await resp.json()
-      setPostData(prev => prev ? ({
-        ...prev,
-        sections: [...(prev.sections || []), created].sort((a, b) => a.position - b.position)
-      }) : null)
-
+      // Refresh CTAs
+      await fetchCtas()
+      
       // Reset CTA form
       setCtaData({
         title: '',
@@ -727,7 +620,7 @@ export default function EditPostPage() {
       toast.success('CTA added successfully')
     } catch (error) {
       console.error('Error adding CTA:', error)
-      toast.error('Failed to add CTA')
+      toast.error('Failed to create CTA')
     }
   }
 
@@ -1026,69 +919,54 @@ export default function EditPostPage() {
                 {/* Content Editor */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>Content</span>
-                      {loadingSectionContent && (
-                        <div className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-4 w-4 animate-spin" />
-                          Loading content...
-                        </div>
-                      )}
-                      {savingSectionContent && (
-                        <div className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Save className="h-4 w-4 animate-pulse" />
-                          Saving...
-                        </div>
-                      )}
-                    </CardTitle>
+                    <CardTitle>Content</CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      This content is loaded from your Rich Text Content sections and will be saved automatically as you type.
+                      Content is now managed directly in the post content field. No longer using sections.
                     </p>
                   </CardHeader>
                   <CardContent>
-                    <RichTextEditor
-                      content={sectionContent}
-                      onChange={(content) => {
-                        // Update the ref immediately to prevent stale closures
-                        latestSectionContentRef.current = content
-                        
-                        // Only update state if content is actually different
-                        if (content !== sectionContent) {
-                          setSectionContent(content)
-                        }
-                        
-                        // Always trigger debounced save with latest content
-                        debouncedSaveSectionContent(content)
-                      }}
-                      placeholder="Start writing your post content..."
-                    />
-                    {sectionContent.length === 0 && !loadingSectionContent && (
-                      <div className="mt-4 p-4 bg-muted/50 rounded-lg text-center">
-                        <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          No content found in Rich Text sections
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Start typing above to create your first Rich Text Content section
-                        </p>
+                    <div className="space-y-4">
+                      {/* Editor Mode Toggle */}
+                      <div className="flex gap-2 mb-4">
+                        <Button
+                          type="button"
+                          variant={contentEditorMode === 'visual' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setContentEditorMode('visual')}
+                        >
+                          Visual Editor
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={contentEditorMode === 'html' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setContentEditorMode('html')}
+                        >
+                          HTML Editor
+                        </Button>
                       </div>
-                    )}
-                    <div className="mt-4 flex justify-end">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            await updateSectionContent(postId, sectionContent, true) // Show toast for manual save
-                          } catch (error) {
-                            // Error already handled
-                          }
-                        }}
-                        disabled={savingSectionContent}
-                      >
-                        <Save className="h-4 w-4 mr-2" />
-                        {savingSectionContent ? 'Saving...' : 'Save Content'}
-                      </Button>
+
+                      {contentEditorMode === 'visual' ? (
+                        /* Rich Text Editor */
+                        <RichTextEditor
+                          content={postData.content || ''}
+                          onChange={(content) => setPostData(prev => prev ? ({ ...prev, content }) : null)}
+                          placeholder="Start writing your post content..."
+                        />
+                      ) : (
+                        /* HTML Source Editor */
+                        <Textarea
+                          value={postData.content || ''}
+                          onChange={(e) => setPostData(prev => prev ? ({ ...prev, content: e.target.value }) : null)}
+                          placeholder="Write your post content here..."
+                          rows={15}
+                          className="min-h-[400px] font-mono text-sm"
+                        />
+                      )}
+
+                      <p className="text-xs text-muted-foreground">
+                        {(postData.content || '').length} characters
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -1485,22 +1363,18 @@ export default function EditPostPage() {
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg">Current CTAs</h3>
                   
-                  {postData.sections && postData.sections.filter(section => 
-                    (section as any).template_id === CTA_TEMPLATE
-                  ).length > 0 ? (
+                  {currentCtas && currentCtas.length > 0 ? (
                     <div className="space-y-4">
-                      {postData.sections
-                        .filter(section => (section as any).template_id === CTA_TEMPLATE)
-                        .map((section, index) => (
-                        <Card key={section.id} className="border-l-4 border-l-purple-500">
+                      {currentCtas.map((cta, index) => (
+                        <Card key={cta.id} className="border-l-4 border-l-purple-500">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                                  CTA: {(section as any).data?.title || 'Untitled CTA'}
+                                  CTA: {cta.title}
                                 </Badge>
                                 <span className="text-sm text-muted-foreground">
-                                  Position {section.position}
+                                  Position {cta.position}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
@@ -1508,14 +1382,14 @@ export default function EditPostPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={async () => {
-                                    const newPos = Math.max(0, section.position - 1)
+                                    const newPos = Math.max(1, cta.position - 1)
                                     try {
-                                      await fetch(`/api/admin/sections/${section.id}`, {
+                                      await fetch(`/api/admin/ctas/${cta.id}`, {
                                         method: 'PUT',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ position: newPos })
                                       })
-                                      fetchPost() // Refresh data
+                                      fetchCtas() // Refresh data
                                     } catch {}
                                   }}
                                 >
@@ -1525,14 +1399,14 @@ export default function EditPostPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={async () => {
-                                    const newPos = section.position + 1
+                                    const newPos = cta.position + 1
                                     try {
-                                      await fetch(`/api/admin/sections/${section.id}`, {
+                                      await fetch(`/api/admin/ctas/${cta.id}`, {
                                         method: 'PUT',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ position: newPos })
                                       })
-                                      fetchPost() // Refresh data
+                                      fetchCtas() // Refresh data
                                     } catch {}
                                   }}
                                 >
@@ -1544,8 +1418,8 @@ export default function EditPostPage() {
                                   onClick={async () => {
                                     if (!confirm('Delete this CTA?')) return
                                     try {
-                                      await fetch(`/api/admin/sections/${section.id}`, { method: 'DELETE' })
-                                      fetchPost() // Refresh data
+                                      await fetch(`/api/admin/ctas/${cta.id}`, { method: 'DELETE' })
+                                      fetchCtas() // Refresh data
                                       toast.success('CTA deleted')
                                     } catch (err) {
                                       console.error(err)
@@ -1559,11 +1433,16 @@ export default function EditPostPage() {
                             </div>
                             
                             <div className="text-sm text-muted-foreground mb-2">
-                              <strong>Button:</strong> {(section as any).data?.buttonText || 'No button text'}
+                              <strong>Button:</strong> {cta.button_text}
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              <strong>Link:</strong> {(section as any).data?.link || 'No link'}
+                            <div className="text-sm text-muted-foreground mb-2">
+                              <strong>Link:</strong> {cta.button_link}
                             </div>
+                            {cta.description && (
+                              <div className="text-sm text-muted-foreground">
+                                <strong>Description:</strong> {cta.description}
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}

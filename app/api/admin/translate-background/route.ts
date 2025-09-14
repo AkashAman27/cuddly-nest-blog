@@ -62,12 +62,7 @@ async function processTranslationsInBackground(postId: string, validLanguages: s
     // Get the original post with sections
     const { data: originalPost, error: postError } = await supabaseAdmin
       .from('cuddly_nest_modern_post')
-      .select(`
-        *,
-        sections:modern_post_sections(
-          id, template_id, title, data, position, is_active
-        )
-      `)
+      .select('*')
       .eq('id', postId)
       .single()
 

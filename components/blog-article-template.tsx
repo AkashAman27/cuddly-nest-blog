@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Calendar, Clock, Share2, User, MapPin, Star, Wifi, Car, Coffee, Utensils } from "lucide-react"
 import { useEffect, useState } from 'react'
 import { SafeBlogContent } from "@/components/security/SafeHtml"
+import { CtaDisplay } from "@/components/cta-display"
 
 // Enhanced Types for Universal Template
 interface Author {
@@ -64,6 +65,15 @@ interface BudgetInfo {
   }>
 }
 
+interface CTA {
+  id: string
+  title: string
+  description?: string
+  button_text: string
+  button_link: string
+  position: number
+}
+
 interface TravelTips {
   category: string
   tips: string[]
@@ -105,6 +115,7 @@ interface BlogArticleData {
   budget_info?: BudgetInfo
   travel_tips?: TravelTips[]
   starter_pack_data?: any
+  ctas?: CTA[]
 }
 
 interface BlogArticleTemplateProps {
@@ -748,6 +759,17 @@ export function BlogArticleTemplate({ article, availableTranslations = [] }: Blo
               }}
             />
             
+            {/* CTAs - Position 1: After introduction */}
+            {article.ctas && article.ctas.filter(cta => cta.position === 1).map(cta => (
+              <CtaDisplay
+                key={cta.id}
+                title={cta.title}
+                description={cta.description}
+                buttonText={cta.button_text}
+                buttonLink={cta.button_link}
+              />
+            ))}
+            
             {/* Enhanced Content Sections */}
             
             {/* Hotels Section */}
@@ -786,6 +808,17 @@ export function BlogArticleTemplate({ article, availableTranslations = [] }: Blo
                 <ItinerarySection itinerary={article.itinerary} />
               </section>
             )}
+            
+            {/* CTAs - Position 2: Middle of content */}
+            {article.ctas && article.ctas.filter(cta => cta.position === 2).map(cta => (
+              <CtaDisplay
+                key={cta.id}
+                title={cta.title}
+                description={cta.description}
+                buttonText={cta.button_text}
+                buttonLink={cta.button_link}
+              />
+            ))}
             
             {/* Travel Tips Section */}
             {article.travel_tips && article.travel_tips.length > 0 && (
@@ -999,6 +1032,30 @@ export function BlogArticleTemplate({ article, availableTranslations = [] }: Blo
             </div>
           </section>
         )}
+        
+        {/* CTAs - Position 3: Before conclusion */}
+        {article.ctas && article.ctas.filter(cta => cta.position === 3).map(cta => (
+          <div key={cta.id} style={{ paddingLeft: '160px', paddingRight: '160px', marginTop: '40px' }}>
+            <CtaDisplay
+              title={cta.title}
+              description={cta.description}
+              buttonText={cta.button_text}
+              buttonLink={cta.button_link}
+            />
+          </div>
+        ))}
+
+        {/* CTAs - Position 4: End of content */}
+        {article.ctas && article.ctas.filter(cta => cta.position === 4).map(cta => (
+          <div key={cta.id} style={{ paddingLeft: '160px', paddingRight: '160px', marginTop: '40px' }}>
+            <CtaDisplay
+              title={cta.title}
+              description={cta.description}
+              buttonText={cta.button_text}
+              buttonLink={cta.button_link}
+            />
+          </div>
+        ))}
 
         {/* Author Section */}
         <section style={{ marginTop: '80px', paddingLeft: '160px', paddingRight: '160px' }}>
