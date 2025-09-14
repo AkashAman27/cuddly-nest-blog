@@ -234,15 +234,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
             </form>
 
             <div className="mt-6 text-center text-sm text-gray-600">
-              <p className="mb-2">Available admin accounts:</p>
-              <div className="bg-gray-50 p-3 rounded text-xs space-y-1">
-                <div className="font-semibold text-green-800">akash@theprojectseo.com (Super Admin) ⭐</div>
-                <div>admin@example.com (Admin)</div>
-                <div>akash@theslack.com (Admin)</div>
-                <div>mod@example.com (Moderator)</div>
-                <div>yokato2589@ikanteri.com (Moderator)</div>
-              </div>
-              <p className="mt-2 text-xs">Contact administrator to reset password via Supabase dashboard</p>
+              <p className="text-xs">Contact administrator to reset password</p>
             </div>
           </CardContent>
         </Card>

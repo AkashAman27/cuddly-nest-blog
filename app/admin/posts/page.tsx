@@ -121,7 +121,7 @@ export default function PostsPage() {
         ...(searchQuery.trim() && { search: searchQuery.trim() })
       })
       
-      const response = await fetch(`/api/admin/posts-simple?${searchParams}`)
+      const response = await fetch(`/api/admin/posts?${searchParams}`)
       if (!response.ok) {
         throw new Error('Failed to fetch posts')
       }
@@ -131,17 +131,27 @@ export default function PostsPage() {
 
       setPosts(postsData)
       
-      // Get total counts from API if needed, for now use the returned data
-      // We need to fetch total counts separately as this page might be filtered
-      const allResponse = await fetch('/api/admin/posts-simple?limit=1')
-      const allData = await allResponse.json()
+      // Get actual counts for each status from separate API calls
+      const [allCountResponse, publishedCountResponse, draftCountResponse, archivedCountResponse] = await Promise.all([
+        fetch('/api/admin/posts?limit=1'),
+        fetch('/api/admin/posts?limit=1&status=published'),
+        fetch('/api/admin/posts?limit=1&status=draft'),
+        fetch('/api/admin/posts?limit=1&status=archived')
+      ])
+
+      const [allCountData, publishedCountData, draftCountData, archivedCountData] = await Promise.all([
+        allCountResponse.json(),
+        publishedCountResponse.json(),
+        draftCountResponse.json(),
+        archivedCountResponse.json()
+      ])
       
-      // Calculate counts for filter tabs
+      // Use the actual totals from API pagination data
       const counts = {
-        all: data.pagination?.total || postsData.length,
-        published: postsData.filter(p => p.status === 'published').length,
-        draft: postsData.filter(p => p.status === 'draft').length,
-        archived: postsData.filter(p => p.status === 'archived').length,
+        all: allCountData.pagination?.total || 0,
+        published: publishedCountData.pagination?.total || 0,
+        draft: draftCountData.pagination?.total || 0,
+        archived: archivedCountData.pagination?.total || 0,
         trash: 0 // TODO: Add trash status support
       }
       setPostCounts(counts)
@@ -318,7 +328,7 @@ export default function PostsPage() {
     try {
       setIsSaving(true)
       
-      const response = await fetch(`/api/admin/posts-simple?id=${quickEditPost.id}`, {
+      const response = await fetch(`/api/admin/posts/${quickEditPost.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

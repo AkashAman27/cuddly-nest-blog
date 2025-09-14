@@ -11,7 +11,8 @@ const convertAnyPostToArticle = (post: any) => {
   return {
     ...post,
     publishedAt: post.published_at || post.created_at,
-    featuredImage: post.featured_image_url ? { file_url: post.featured_image_url } : null,
+    featured_image: post.featured_image_url ? { file_url: post.featured_image_url } : null,
+    og_image: post.og_image ? { file_url: post.og_image } : null,
     author: post.author || { display_name: 'CuddlyNest Team' },
     read_time: formatReadingTime(readingMinutes),
     sections: [],

@@ -192,7 +192,7 @@ export default function EditPostPage() {
   const fetchPost = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/admin/posts-simple/${postId}`)
+      const response = await fetch(`/api/admin/posts/${postId}`)
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -384,7 +384,7 @@ export default function EditPostPage() {
     console.log('Updating post with ID:', postId)
     console.log('Sending update payload:', payload)
 
-    const resp = await fetch(`/api/admin/posts-simple/${postId}`, {
+    const resp = await fetch(`/api/admin/posts/${postId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -463,7 +463,7 @@ export default function EditPostPage() {
     }
 
     try {
-      const resp = await fetch(`/api/admin/posts-simple/${postId}`, { method: 'DELETE' })
+      const resp = await fetch(`/api/admin/posts/${postId}`, { method: 'DELETE' })
       if (!resp.ok) throw new Error('Failed to delete post')
       toast.success('Post deleted successfully')
       router.push('/admin/posts')
