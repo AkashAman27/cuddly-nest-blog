@@ -1,4 +1,4 @@
-import { getStarterPackForPost, getLegacyBlogPostBySlug, getCuddlyNestPostBySlug, getCuddlyNestPostBySlugWithPreview, supabase } from "@/lib/supabase"
+import { getStarterPackForPost, getCuddlyNestPostBySlug, getCuddlyNestPostBySlugWithPreview, supabase } from "@/lib/supabase"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { BlogArticleTemplate } from "@/components/blog-article-template"
@@ -233,23 +233,7 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
     }
   }
   
-  let isLegacyPost = false
-  let legacyPost = null
-  
-  // If no modern post found, try legacy blog_posts table
-  if (!post && postSlug) {
-    legacyPost = await getLegacyBlogPostBySlug(postSlug)
-    if (legacyPost) {
-      isLegacyPost = true
-      console.log('Found legacy post:', {
-        id: legacyPost.id,
-        title: legacyPost.title,
-        contentLength: legacyPost.content?.length || 0
-      })
-    }
-  }
-  
-  if (!post && !legacyPost) {
+  if (!post) {
     notFound()
   }
 
@@ -257,8 +241,8 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
   let translations = null
   
   try {
-    // Get available translations for this post (only for modern posts)
-    if (!isLegacyPost && post && post.id) {
+    // Get available translations for this post
+    if (post && post.id) {
       const { data: translationData } = await supabase
         .from('post_translations')
         .select('language_code, translated_slug, translation_status')
@@ -335,7 +319,7 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
   // Get starter pack data for this post (only for modern posts)  
   let starterPackData = null
   try {
-    if (!isLegacyPost && post) {
+    if (post) {
       starterPackData = await getStarterPackForPost(post.id)
     }
   } catch (error) {
@@ -343,57 +327,6 @@ export default async function BlogPostPage({ params, searchParams }: BlogPostPag
   }
 
   // Note: Starter pack data injection removed since we no longer use sections
-
-  // For legacy posts, use the universal converter
-  if (isLegacyPost && legacyPost) {
-    try {
-      const articleData = convertAnyPostToArticle(legacyPost)
-      
-      const legacyJsonLd = {
-        '@context': 'https://schema.org',
-        '@type': 'Article',
-        headline: legacyPost.title,
-        description: legacyPost.excerpt || '',
-        image: legacyPost.featured_image_url || '',
-        datePublished: legacyPost.published_at,
-        dateModified: legacyPost.modified_at || legacyPost.updated_at,
-        author: {
-          '@type': 'Person',
-          name: articleData.author.display_name,
-        },
-        publisher: {
-          '@type': 'Organization',
-          name: 'CuddlyNest',
-          logo: {
-            '@type': 'ImageObject',
-            url: 'https://cuddlynest.com/logo.png',
-          },
-        },
-        mainEntityOfPage: {
-          '@type': 'WebPage',
-          '@id': `https://cuddlynest.com/blog/${fullSlug}`,
-        },
-        articleSection: 'Travel Guide',
-        keywords: `travel, ${legacyPost.title}, travel guide`,
-      }
-
-      return (
-        <>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(legacyJsonLd) }}
-          />
-          <BlogArticleTemplate 
-            article={articleData} 
-            availableTranslations={[]} 
-          />
-        </>
-      )
-    } catch (error) {
-      console.error('Error converting legacy post:', error)
-      notFound()
-    }
-  }
 
   // JSON-LD structured data for SEO
   const jsonLd = translatedPost ? {
@@ -581,52 +514,10 @@ export async function generateMetadata({ params }: BlogPostPageProps) {
     post = await getCuddlyNestPostBySlug(postSlug)
   }
   
-  let legacyPost = null
-  
-  // If no modern post found, try legacy blog_posts table
-  if (!post && postSlug) {
-    legacyPost = await getLegacyBlogPostBySlug(postSlug)
-  }
-  
-  if (!post && !legacyPost) {
+  if (!post) {
     return {
       title: 'Post Not Found',
       description: 'The requested post could not be found.'
-    }
-  }
-
-  // Handle legacy post metadata
-  if (legacyPost && !post) {
-    return {
-      title: legacyPost.seo_title || legacyPost.title,
-      description: legacyPost.meta_description || legacyPost.excerpt,
-      keywords: `travel, ${legacyPost.title}, travel guide`,
-      alternates: {
-        canonical: `/blog/${fullSlug}`,
-      },
-      openGraph: {
-        title: legacyPost.seo_title || legacyPost.title,
-        description: legacyPost.meta_description || legacyPost.excerpt,
-        type: 'article',
-        locale: language,
-        publishedTime: legacyPost.published_at,
-        modifiedTime: legacyPost.modified_at || legacyPost.updated_at,
-        authors: ['CuddlyNest Travel Team'],
-        images: legacyPost.featured_image_url ? [{
-          url: legacyPost.featured_image_url,
-          alt: legacyPost.title
-        }] : []
-      },
-      twitter: {
-        card: 'summary_large_image',
-        site: '@cuddlynest',
-        title: legacyPost.seo_title || legacyPost.title,
-        description: legacyPost.meta_description || legacyPost.excerpt,
-        images: legacyPost.featured_image_url ? [{
-          url: legacyPost.featured_image_url,
-          alt: legacyPost.title
-        }] : []
-      },
     }
   }
 

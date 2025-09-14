@@ -109,7 +109,6 @@ export interface ModernPost {
   published_at?: string
   author_id: string
   author?: ModernAuthor
-  sections?: ModernSection[]
   categories?: ModernCategory[]
   // SEO fields
   meta_title?: string
@@ -186,23 +185,6 @@ export interface ModernAuthor {
   updated_at: string
 }
 
-export interface ModernSection {
-  id: string
-  template_id: string
-  title?: string
-  position: number
-  data: any
-  is_active: boolean
-  mobile_hidden?: boolean
-  tablet_hidden?: boolean
-  created_at: string
-  updated_at: string
-  template?: {
-    name: string
-    component_name: string
-    category: string
-  }
-}
 
 // Fetch a single modern blog post by slug with sections (published only)
 export async function getModernPostBySlug(slug: string): Promise<ModernPost | null> {
@@ -230,13 +212,12 @@ export async function getModernPostBySlug(slug: string): Promise<ModernPost | nu
       return null
     }
 
-    // Transform data to match expected structure (no sections needed)
+    // Transform data to match expected structure
     const transformedPost = {
       ...postData,
       author: postData.modern_authors,
       blog_authors: postData.modern_authors, // Keep for backward compatibility
       categories: [],
-      sections: [], // No longer using sections
       featured_image_url: postData.og_image || null,
       og_image: postData.og_image ? { file_url: postData.og_image } : null,
       published_at: postData.published_at || postData.created_at
@@ -282,7 +263,6 @@ export async function getModernPostBySlugWithPreview(slug: string, allowDraft: b
 
     const transformedPost: ModernPost = {
       ...postData,
-      sections: [], // No longer using sections
       author: postData.modern_authors || null,
       og_image: postData.og_image ? { file_url: postData.og_image } : null
     }
@@ -355,7 +335,6 @@ export async function getRecentPosts(limit: number = 8) {
         }
       }
       
-      // No fallback needed since we no longer use sections
       return {
         ...post,
         featured_image: null
@@ -412,7 +391,6 @@ export async function getFeaturedPosts(limit: number = 6) {
         }
       }
       
-      // No fallback needed since we no longer use sections
       return {
         ...post,
         featured_image: null
@@ -778,68 +756,6 @@ export async function searchCategories(query: string, limit: number = 10): Promi
 
 // ADMIN CATEGORY MANAGEMENT FUNCTIONS (Require authentication)
 
-// Create new category
-export async function createCategory(categoryData: Partial<ModernCategory>): Promise<{ success: boolean; data?: ModernCategory; error?: string }> {
-  try {
-    const { data, error } = await supabase
-      .from('categories')
-      .insert(categoryData)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating category:', error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, data }
-  } catch (error) {
-    console.error('Exception creating category:', error)
-    return { success: false, error: 'Failed to create category' }
-  }
-}
-
-// Update category
-export async function updateCategory(id: string, updates: Partial<ModernCategory>): Promise<{ success: boolean; data?: ModernCategory; error?: string }> {
-  try {
-    const { data, error } = await supabase
-      .from('categories')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error updating category:', error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, data }
-  } catch (error) {
-    console.error('Exception updating category:', error)
-    return { success: false, error: 'Failed to update category' }
-  }
-}
-
-// Delete category
-export async function deleteCategory(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('categories')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error deleting category:', error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('Exception deleting category:', error)
-    return { success: false, error: 'Failed to delete category' }
-  }
-}
 
 // Get all categories for admin (including unpublished)
 export async function getAdminCategories(): Promise<ModernCategory[]> {
@@ -873,109 +789,7 @@ export async function getAdminCategories(): Promise<ModernCategory[]> {
   }
 }
 
-// Add/remove post from category
-export async function addPostToCategory(postId: string, categoryId: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('post_categories')
-      .insert({ post_id: postId, category_id: categoryId })
 
-    if (error) {
-      console.error('Error adding post to category:', error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('Exception adding post to category:', error)
-    return { success: false, error: 'Failed to add post to category' }
-  }
-}
-
-export async function removePostFromCategory(postId: string, categoryId: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('post_categories')
-      .delete()
-      .eq('post_id', postId)
-      .eq('category_id', categoryId)
-
-    if (error) {
-      console.error('Error removing post from category:', error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('Exception removing post from category:', error)
-    return { success: false, error: 'Failed to remove post from category' }
-  }
-}
-
-// CATEGORY FAQ MANAGEMENT
-
-// Create FAQ for category
-export async function createCategoryFAQ(faqData: Partial<CategoryFAQ>): Promise<{ success: boolean; data?: CategoryFAQ; error?: string }> {
-  try {
-    const { data, error } = await supabase
-      .from('category_faqs')
-      .insert(faqData)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating category FAQ:', error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, data }
-  } catch (error) {
-    console.error('Exception creating category FAQ:', error)
-    return { success: false, error: 'Failed to create FAQ' }
-  }
-}
-
-// Update FAQ
-export async function updateCategoryFAQ(id: string, updates: Partial<CategoryFAQ>): Promise<{ success: boolean; data?: CategoryFAQ; error?: string }> {
-  try {
-    const { data, error } = await supabase
-      .from('category_faqs')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error updating FAQ:', error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, data }
-  } catch (error) {
-    console.error('Exception updating FAQ:', error)
-    return { success: false, error: 'Failed to update FAQ' }
-  }
-}
-
-// Delete FAQ
-export async function deleteCategoryFAQ(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { error } = await supabase
-      .from('category_faqs')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      console.error('Error deleting FAQ:', error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('Exception deleting FAQ:', error)
-    return { success: false, error: 'Failed to delete FAQ' }
-  }
-}
 
 // Get popular categories (legacy compatibility)
 export async function getPopularCategories(limit: number = 8) {
@@ -1075,6 +889,74 @@ export async function createStarterPackSection(
   }
 }
 
+// Get simplified post by slug (used by blog pages)
+export async function getCuddlyNestPostBySlug(slug: string) {
+  try {
+    const { data: post, error } = await supabase
+      .from('cuddly_nest_modern_post')
+      .select(`
+        *,
+        author:modern_authors(id, display_name, avatar_url, bio)
+      `)
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      console.error('Error fetching post:', error)
+      return null
+    }
+
+    return {
+      ...post,
+      author: post.author || null
+    }
+  } catch (error) {
+    console.error('Exception fetching post:', error)
+    return null
+  }
+}
+
+// Get simplified post by slug with preview support (can return drafts)
+export async function getCuddlyNestPostBySlugWithPreview(slug: string, allowDraft: boolean = false) {
+  try {
+    const client = (allowDraft && supabaseAdmin) ? supabaseAdmin : supabase
+    
+    let query = client
+      .from('cuddly_nest_modern_post')
+      .select(`
+        *,
+        author:modern_authors(id, display_name, avatar_url, bio)
+      `)
+      .eq('slug', slug)
+
+    if (!allowDraft) {
+      query = query.eq('status', 'published')
+    }
+
+    const { data: post, error } = await query.single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      console.error('Error fetching post with preview:', error)
+      return null
+    }
+
+    return {
+      ...post,
+      author: post.author || null
+    }
+  } catch (error) {
+    console.error('Exception fetching post with preview:', error)
+    return null
+  }
+}
+
 // Search posts by title, excerpt, or content
 export async function searchPosts(query: string, limit: number = 20) {
   if (!query.trim()) {
@@ -1116,627 +998,4 @@ export async function searchPosts(query: string, limit: number = 20) {
   return postsWithImages
 }
 
-// Legacy blog post interfaces for the blog_posts table
-export interface LegacyBlogPost {
-  id: number
-  wp_post_id?: number
-  title: string
-  slug: string
-  content?: string
-  excerpt?: string
-  status: string
-  post_type?: string
-  published_at?: string
-  modified_at?: string
-  author_id?: number
-  featured_image_url?: string
-  meta_description?: string
-  seo_title?: string
-  created_at: string
-  updated_at: string
-  wordpress_id?: number
-  blog_sections?: Array<{
-    id: number
-    post_id: number
-    section_type: string
-    title?: string
-    content: any
-    position?: number
-    is_active: boolean
-  }>
-  modern_wordpress_content?: Array<{
-    id: string
-    position: number
-    data: any
-  }>
-}
 
-export interface LegacyBlogAuthor {
-  id: number
-  wp_author_id?: number
-  login: string
-  email: string
-  display_name?: string
-  first_name?: string
-  last_name?: string
-  created_at: string
-  updated_at: string
-  wordpress_id?: number
-}
-
-export interface LegacyBlogCategory {
-  id: number
-  name: string
-  slug: string
-  description?: string
-  created_at: string
-  updated_at: string
-  wordpress_id?: number
-}
-
-// Get legacy blog post by slug with author and categories
-export async function getLegacyBlogPostBySlug(slug: string): Promise<LegacyBlogPost | null> {
-  try {
-    // Use admin client to bypass RLS policies for legacy posts
-    const client = supabaseAdmin || supabase
-    const { data: postData, error: postError } = await client
-      .from('blog_posts')
-      .select(`
-        *,
-        blog_authors(*),
-        blog_post_categories(
-          blog_categories(*)
-        )
-      `)
-      .eq('slug', slug)
-      .or('status.eq.publish,status.eq.published,status.eq.migrated')
-      .single()
-
-    if (postError) {
-      if (postError.code === 'PGRST116') {
-        console.log(`Legacy blog post not found for slug: ${slug}`)
-        return null
-      }
-      console.error('Error fetching legacy blog post:', postError.message)
-      return null
-    }
-
-    if (!postData) {
-      return null
-    }
-
-    // No longer fetching WordPress content from sections
-    let modernWordPressContent: any[] = []
-
-    // Also fetch legacy blog sections as fallback
-    const { data: sectionsData, error: sectionsError } = await client
-      .from('blog_sections')
-      .select('*')
-      .eq('post_id', postData.id)
-      .eq('is_active', true)
-      .order('position', { ascending: true })
-
-    if (sectionsError) {
-      console.warn('Warning: Could not fetch sections for legacy post:', sectionsError.message)
-    }
-
-    // Add both sections to the post data
-    const postWithSections = {
-      ...postData,
-      blog_sections: sectionsData || [],
-      modern_wordpress_content: modernWordPressContent
-    }
-
-    return postWithSections
-  } catch (error) {
-    console.error('Exception fetching legacy blog post:', error)
-    return null
-  }
-}
-
-// Get all published legacy blog posts for migration or listing
-export async function getLegacyBlogPosts(limit: number = 50, offset: number = 0): Promise<LegacyBlogPost[]> {
-  try {
-    // Use admin client to bypass RLS policies for legacy posts
-    const client = supabaseAdmin || supabase
-    const { data: posts, error } = await client
-      .from('blog_posts')
-      .select(`
-        *,
-        blog_authors(*),
-        blog_post_categories(
-          blog_categories(*)
-        )
-      `)
-      .or('status.eq.publish,status.eq.published,status.eq.migrated')
-      .not('published_at', 'is', null)
-      .order('published_at', { ascending: false })
-      .range(offset, offset + (limit * 2) - 1) // Get more to filter out nulls
-
-    if (error) {
-      console.error('Error fetching legacy blog posts:', error)
-      return []
-    }
-
-    // Filter out posts with null status and limit results
-    const filteredPosts = (posts || [])
-      .filter(post => post.status && ['publish', 'published', 'migrated'].includes(post.status))
-      .slice(0, limit)
-
-    return filteredPosts
-  } catch (error) {
-    console.error('Exception fetching legacy blog posts:', error)
-    return []
-  }
-}
-
-// Search legacy blog posts
-export async function searchLegacyBlogPosts(query: string, limit: number = 20): Promise<LegacyBlogPost[]> {
-  try {
-    if (!query.trim()) {
-      return getLegacyBlogPosts(limit)
-    }
-
-    // Use admin client to bypass RLS policies for legacy posts
-    const client = supabaseAdmin || supabase
-    const { data: posts, error } = await client
-      .from('blog_posts')
-      .select(`
-        *,
-        blog_authors(*),
-        blog_post_categories(
-          blog_categories(*)
-        )
-      `)
-      .or('status.eq.publish,status.eq.published,status.eq.migrated')
-      .not('published_at', 'is', null)
-      .or(`title.ilike.%${query}%,content.ilike.%${query}%,excerpt.ilike.%${query}%`)
-      .order('published_at', { ascending: false })
-      .limit(limit * 2) // Get more to filter out nulls
-
-    if (error) {
-      console.error('Error searching legacy blog posts:', error)
-      return []
-    }
-
-    // Filter out posts with null status and limit results
-    const filteredPosts = (posts || [])
-      .filter(post => {
-        const hasValidStatus = post.status && ['publish', 'published', 'migrated'].includes(post.status)
-        if (!hasValidStatus) {
-          console.log('Filtering out legacy post with invalid status:', post.id, post.title, post.status)
-        }
-        return hasValidStatus
-      })
-      .slice(0, limit)
-
-    console.log(`searchLegacyBlogPosts: Found ${posts?.length} posts, filtered to ${filteredPosts.length}`)
-    return filteredPosts
-  } catch (error) {
-    console.error('Exception searching legacy blog posts:', error)
-    return []
-  }
-}
-
-// Get recent legacy blog posts for homepage
-export async function getRecentLegacyPosts(limit: number = 8) {
-  try {
-    // Use admin client to bypass RLS policies for legacy posts
-    const client = supabaseAdmin || supabase
-    const { data: posts, error } = await client
-      .from('blog_posts')
-      .select(`
-        id,
-        title,
-        slug,
-        excerpt,
-        published_at,
-        created_at,
-        featured_image_url,
-        blog_authors(display_name)
-      `)
-      .or('status.eq.publish,status.eq.published,status.eq.migrated')
-      .order('published_at', { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.error('Error fetching recent legacy posts:', error)
-      return []
-    }
-
-    // Transform posts to match the expected format
-    const postsWithImages = (posts || []).map((post) => ({
-      id: post.id.toString(),
-      title: post.title,
-      slug: post.slug,
-      excerpt: post.excerpt,
-      published_at: post.published_at,
-      created_at: post.created_at,
-      reading_time: 5, // Default reading time
-      featured_image: post.featured_image_url ? { file_url: post.featured_image_url } : null
-    }))
-
-    return postsWithImages
-  } catch (error) {
-    console.error('Exception fetching recent legacy posts:', error)
-    return []
-  }
-}
-
-// Get combined recent posts (modern + legacy)
-export async function getCombinedRecentPosts(limit: number = 8) {
-  try {
-    // Get modern posts
-    const modernPosts = await getRecentPosts(Math.ceil(limit / 2))
-    
-    // Get legacy posts
-    const legacyPosts = await getRecentLegacyPosts(limit - modernPosts.length)
-    
-    // Combine and sort by published_at
-    const combinedPosts = [...modernPosts, ...legacyPosts].sort((a, b) => {
-      const dateA = new Date(a.published_at || a.created_at)
-      const dateB = new Date(b.published_at || b.created_at)
-      return dateB.getTime() - dateA.getTime()
-    })
-
-    return combinedPosts.slice(0, limit)
-  } catch (error) {
-    console.error('Exception getting combined recent posts:', error)
-    return []
-  }
-}
-
-// Combined search for both modern and legacy posts
-export async function searchCombinedPosts(query: string, limit: number = 20) {
-  try {
-    if (!query.trim()) {
-      return getCombinedRecentPosts(limit)
-    }
-
-    // Search both modern and legacy posts
-    const [modernPosts, legacyPosts] = await Promise.all([
-      searchPosts(query, Math.ceil(limit / 2)),
-      searchLegacyBlogPosts(query, Math.ceil(limit / 2))
-    ])
-
-    // Transform legacy posts to match modern post format
-    const transformedLegacyPosts = legacyPosts.map((post) => ({
-      id: post.id.toString(),
-      title: post.title,
-      slug: post.slug,
-      excerpt: post.excerpt,
-      published_at: post.published_at,
-      created_at: post.created_at,
-      reading_time: 5, // Default reading time
-      featured_image: post.featured_image_url ? { file_url: post.featured_image_url } : null
-    }))
-
-    // Combine and sort by relevance/date
-    const combinedPosts = [...modernPosts, ...transformedLegacyPosts].sort((a, b) => {
-      const dateA = new Date(a.published_at || a.created_at)
-      const dateB = new Date(b.published_at || b.created_at)
-      return dateB.getTime() - dateA.getTime()
-    })
-
-    return combinedPosts.slice(0, limit)
-  } catch (error) {
-    console.error('Exception searching combined posts:', error)
-    return []
-  }
-}
-
-// =============================================
-// SIMPLIFIED CUDDLY NEST MODERN POST FUNCTIONS
-// =============================================
-
-export interface CuddlyNestCTA {
-  id: string
-  post_id: string
-  title: string
-  description?: string
-  button_text: string
-  button_link: string
-  position: number
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface CuddlyNestPost {
-  id: string
-  title: string
-  slug: string
-  content?: string
-  excerpt?: string
-  featured_image_url?: string
-  featured_image_alt?: string
-  author_id: string
-  status: 'draft' | 'published' | 'archived'
-  published_at?: string
-  scheduled_at?: string
-  
-  // SEO fields
-  meta_title?: string
-  meta_description?: string
-  seo_title?: string
-  seo_description?: string
-  seo_keywords?: string
-  canonical_url?: string
-  
-  // Open Graph
-  og_title?: string
-  og_description?: string
-  og_image?: string
-  og_image_alt?: string
-  
-  // Twitter
-  twitter_title?: string
-  twitter_description?: string
-  twitter_image?: string
-  twitter_image_alt?: string
-  
-  // SEO robots
-  robots_index?: boolean
-  robots_follow?: boolean
-  robots_nosnippet?: boolean
-  
-  // Post features
-  allow_comments?: boolean
-  is_featured?: boolean
-  view_count?: number
-  reading_time?: number
-  
-  // Legacy compatibility
-  original_wp_id?: number
-  wp_post_id?: number
-  
-  // Timestamps
-  created_at: string
-  updated_at: string
-  
-  // Relations (joined data)
-  author?: {
-    id: string
-    display_name: string
-    avatar_url?: string
-    bio?: string
-  }
-  categories?: {
-    id: string
-    name: string
-    slug: string
-  }[]
-  ctas?: CuddlyNestCTA[]
-}
-
-// Get simplified post by slug
-export async function getCuddlyNestPostBySlug(slug: string): Promise<CuddlyNestPost | null> {
-  try {
-    const { data: post, error } = await supabase
-      .from('cuddly_nest_modern_post')
-      .select(`
-        *,
-        author:modern_authors(id, display_name, avatar_url, bio),
-        categories:cuddly_nest_post_categories(
-          category:modern_categories(id, name, slug)
-        ),
-        ctas:cuddly_nest_ctas(id, title, description, button_text, button_link, position, is_active)
-      `)
-      .eq('slug', slug)
-      .eq('status', 'published')
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null
-      }
-      console.error('Error fetching cuddly nest post:', error)
-      return null
-    }
-
-    return {
-      ...post,
-      // Flatten the author structure to avoid nested objects
-      author: post.author ? {
-        id: post.author.id,
-        display_name: post.author.display_name,
-        avatar_url: post.author.avatar_url,
-        bio: post.author.bio
-      } : undefined,
-      categories: post.categories?.map((pc: any) => pc.category).filter(Boolean) || [],
-      ctas: post.ctas?.filter((cta: any) => cta.is_active) || []
-    }
-  } catch (error) {
-    console.error('Exception fetching cuddly nest post:', error)
-    return null
-  }
-}
-
-// Get simplified post by slug with preview support (can return drafts)
-export async function getCuddlyNestPostBySlugWithPreview(slug: string, allowDraft: boolean = false): Promise<CuddlyNestPost | null> {
-  try {
-    // Use admin client for preview functionality to bypass RLS policies
-    const client = (allowDraft && supabaseAdmin) ? supabaseAdmin : supabase
-    
-    let query = client
-      .from('cuddly_nest_modern_post')
-      .select(`
-        *,
-        author:modern_authors(id, display_name, avatar_url, bio),
-        categories:cuddly_nest_post_categories(
-          category:modern_categories(id, name, slug)
-        ),
-        ctas:cuddly_nest_ctas(id, title, description, button_text, button_link, position, is_active)
-      `)
-      .eq('slug', slug)
-
-    // Only filter by published status if not allowing drafts
-    if (!allowDraft) {
-      query = query.eq('status', 'published')
-    }
-
-    const { data: post, error } = await query.single()
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null
-      }
-      console.error('Error fetching cuddly nest post with preview:', error)
-      return null
-    }
-
-    return {
-      ...post,
-      // Flatten the author structure to avoid nested objects
-      author: post.author ? {
-        id: post.author.id,
-        display_name: post.author.display_name,
-        avatar_url: post.author.avatar_url,
-        bio: post.author.bio
-      } : undefined,
-      categories: post.categories?.map((pc: any) => pc.category).filter(Boolean) || [],
-      ctas: post.ctas?.filter((cta: any) => cta.is_active) || []
-    }
-  } catch (error) {
-    console.error('Exception fetching cuddly nest post with preview:', error)
-    return null
-  }
-}
-
-// Get simplified posts for homepage/listing
-export async function getCuddlyNestPosts(limit: number = 20, offset: number = 0) {
-  try {
-    const { data: posts, error } = await supabase
-      .from('cuddly_nest_modern_post')
-      .select(`
-        id,
-        title,
-        slug,
-        excerpt,
-        featured_image_url,
-        featured_image_alt,
-        published_at,
-        reading_time,
-        view_count,
-        is_featured,
-        author:modern_authors(id, display_name, avatar_url),
-        categories:cuddly_nest_post_categories(
-          category:modern_categories(id, name, slug)
-        )
-      `)
-      .eq('status', 'published')
-      .not('published_at', 'is', null)
-      .order('published_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-
-    if (error) {
-      console.error('Error fetching cuddly nest posts:', error)
-      return []
-    }
-
-    return posts?.map(post => ({
-      ...post,
-      // Flatten the author structure to avoid nested objects
-      author: post.author ? {
-        id: post.author.id,
-        display_name: post.author.display_name,
-        avatar_url: post.author.avatar_url,
-        bio: post.author.bio
-      } : undefined,
-      categories: post.categories?.map((pc: any) => pc.category).filter(Boolean) || []
-    })) || []
-  } catch (error) {
-    console.error('Exception fetching cuddly nest posts:', error)
-    return []
-  }
-}
-
-// Get featured posts for homepage
-export async function getFeaturedCuddlyNestPosts(limit: number = 5) {
-  try {
-    const { data: posts, error } = await supabase
-      .from('cuddly_nest_modern_post')
-      .select(`
-        id,
-        title,
-        slug,
-        excerpt,
-        featured_image_url,
-        featured_image_alt,
-        published_at,
-        reading_time,
-        view_count,
-        author:modern_authors(id, display_name, avatar_url),
-        categories:cuddly_nest_post_categories(
-          category:modern_categories(id, name, slug)
-        )
-      `)
-      .eq('status', 'published')
-      .eq('is_featured', true)
-      .not('published_at', 'is', null)
-      .order('published_at', { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.error('Error fetching featured cuddly nest posts:', error)
-      return []
-    }
-
-    return posts?.map(post => ({
-      ...post,
-      // Flatten the author structure to avoid nested objects
-      author: post.author ? {
-        id: post.author.id,
-        display_name: post.author.display_name,
-        avatar_url: post.author.avatar_url,
-        bio: post.author.bio
-      } : undefined,
-      categories: post.categories?.map((pc: any) => pc.category).filter(Boolean) || []
-    })) || []
-  } catch (error) {
-    console.error('Exception fetching featured cuddly nest posts:', error)
-    return []
-  }
-}
-
-// Search simplified posts
-export async function searchCuddlyNestPosts(query: string, limit: number = 10) {
-  try {
-    const { data: posts, error } = await supabase
-      .from('cuddly_nest_modern_post')
-      .select(`
-        id,
-        title,
-        slug,
-        excerpt,
-        featured_image_url,
-        featured_image_alt,
-        published_at,
-        reading_time,
-        author:modern_authors(id, display_name, avatar_url)
-      `)
-      .eq('status', 'published')
-      .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
-      .not('published_at', 'is', null)
-      .order('published_at', { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.error('Error searching cuddly nest posts:', error)
-      return []
-    }
-
-    return posts?.map(post => ({
-      ...post,
-      // Flatten the author structure to avoid nested objects
-      author: post.author ? {
-        id: post.author.id,
-        display_name: post.author.display_name,
-        avatar_url: post.author.avatar_url
-      } : undefined
-    })) || []
-  } catch (error) {
-    console.error('Exception searching cuddly nest posts:', error)
-    return []
-  }
-}
