@@ -1,0 +1,182 @@
+{
+  "en": {
+    "components": {
+      "thingsToDoCards": {
+        "defaultTitle": "Things To Do",
+        "defaultDescription": "Discover the best activities and experiences",
+        "viewDetails": "View Details",
+        "bookNow": "Book Now",
+        "categories": {
+          "villaTours": "Villa Tours",
+          "boatTours": "Boat Tours", 
+          "foodTours": "Food Tours",
+          "culturalTours": "Cultural Tours",
+          "adventureTours": "Adventure Tours",
+          "nightlife": "Nightlife",
+          "architecture": "Architecture",
+          "museums": "Museums",
+          "restaurants": "Restaurants",
+          "shopping": "Shopping"
+        },
+        "badges": {
+          "bestValue": "Best Value",
+          "mostPopular": "Most Popular",
+          "hidden gem": "Hidden Gem",
+          "familyFriendly": "Family Friendly",
+          "romantic": "Romantic",
+          "adventure": "Adventure",
+          "cultural": "Cultural",
+          "foodie": "Foodie"
+        }
+      },
+      "starterPackSection": {
+        "defaultBadge": "Your starter pack",
+        "highlights": {
+          "perfectDuration": "Perfect Duration",
+          "budgetRange": "Budget Range", 
+          "mustSeeSpots": "Must-See Spots",
+          "vibeCheck": "Vibe Check"
+        },
+        "timeUnits": {
+          "days": "days",
+          "nights": "nights",
+          "weeks": "weeks"
+        },
+        "budgetUnits": {
+          "perDay": "per day",
+          "perNight": "per night",
+          "total": "total"
+        }
+      },
+      "hotelCarousel": {
+        "defaultTitle": "Where to Stay",
+        "defaultDescription": "Find the perfect accommodation for your trip",
+        "bookNow": "Book Now",
+        "viewDetails": "View Details",
+        "fromPrice": "From",
+        "perNight": "per night",
+        "ratings": {
+          "excellent": "Excellent",
+          "veryGood": "Very Good", 
+          "good": "Good",
+          "average": "Average"
+        },
+        "amenities": {
+          "wifi": "WiFi",
+          "parking": "Parking",
+          "pool": "Pool",
+          "gym": "Gym",
+          "spa": "Spa",
+          "restaurant": "Restaurant",
+          "bar": "Bar",
+          "airConditioning": "Air Conditioning",
+          "petFriendly": "Pet Friendly",
+          "businessCenter": "Business Center"
+        }
+      },
+      "faqSection": {
+        "defaultTitle": "Frequently Asked Questions",
+        "showMore": "Show More",
+        "showLess": "Show Less"
+      },
+      "internalLinksSection": {
+        "defaultTitle": "Related Articles",
+        "readMore": "Read More",
+        "continueReading": "Continue Reading"
+      },
+      "localTips": {
+        "defaultTitle": "Local Tips",
+        "defaultDescription": "Insider knowledge from locals",
+        "tipCategories": {
+          "transport": "Transport",
+          "food": "Food & Drink",
+          "culture": "Culture",
+          "safety": "Safety",
+          "money": "Money",
+          "language": "Language"
+        }
+      },
+      "whereToStay": {
+        "defaultTitle": "Where to Stay",
+        "neighborhoods": "Neighborhoods",
+        "hotelTypes": "Hotel Types",
+        "luxury": "Luxury",
+        "midRange": "Mid-Range",
+        "budget": "Budget",
+        "viewHotels": "View Hotels"
+      }
+    },
+    "destinations": {
+      "italianLakes": {
+        "name": "Italian Lakes Region",
+        "starterPackBadge": "🏔️ Your Italian Lakes starter pack",
+        "whyDifferent": {
+          "title1": "Natural beauty that steals your breath",
+          "content1": "Crystal-clear waters reflecting snow-capped Alps, charming lakeside villages, and villa gardens straight from a fairytale. The Italian Lakes aren't just scenic - they're soul-stirring.",
+          "title2": "Luxury that feels effortless", 
+          "content2": "From George Clooney's Lake Como to exclusive villa stays, this region does luxury with Italian flair. It's sophisticated without being stuffy, elegant without being pretentious."
+        }
+      },
+      "rome": {
+        "name": "Rome",
+        "starterPackBadge": "🏛️ Your Rome starter pack",
+        "whyDifferent": {
+          "title1": "History that literally surrounds you",
+          "content1": "Walk where gladiators fought, emperors ruled, and saints prayed. Rome isn't a museum - it's a living, breathing chronicle of human civilization that hits different than anywhere else.",
+          "title2": "Food culture that changes everything",
+          "content2": "From perfect carbonara in hidden trattorias to gelato that ruins you for all other ice cream, Rome's food scene is about passion, tradition, and ingredients that taste like they were blessed by the gods."
+        }
+      },
+      "venice": {
+        "name": "Venice", 
+        "starterPackBadge": "🚤 Your Venice starter pack",
+        "whyDifferent": {
+          "title1": "A city that defies reality",
+          "content1": "Built on water, carved from dreams, and painted with light that changes every hour. Venice isn't just unique - it's impossible, yet here it is, floating before you like magic made manifest.",
+          "title2": "Art and architecture that inspire",
+          "content2": "From Byzantine mosaics to Baroque palaces, every building tells a story of merchants, doges, and artists who created beauty on an impossible scale. It's an open-air museum where you're the main character."
+        }
+      },
+      "florence": {
+        "name": "Florence",
+        "starterPackBadge": "🎨 Your Florence starter pack",
+        "whyDifferent": {
+          "title1": "Art that changes how you see the world",
+          "content1": "Stand before Michelangelo's David, walk through the Uffizi, and witness frescoes that defined Western art. Florence isn't just about seeing masterpieces - it's about understanding why beauty matters.",
+          "title2": "A city built for wandering",
+          "content2": "Medieval streets lead to Renaissance piazzas, artisan workshops hide behind ancient doors, and every corner reveals another architectural gem. Florence rewards the curious with discoveries around every turn."
+        }
+      },
+      "naplesAmalfi": {
+        "name": "Naples & Amalfi Coast",
+        "starterPackBadge": "🌊 Your Southern Italy starter pack",
+        "whyDifferent": {
+          "title1": "Coastline that redefines beautiful",
+          "content1": "Cliffs that plunge into turquoise seas, towns that cling to mountainsides like ancient amphitheaters, and views that make your heart skip beats. The Amalfi Coast isn't just scenic - it's transcendent.",
+          "title2": "Culture with serious soul", 
+          "content2": "Naples gave the world pizza, Pompeii preserves ancient life, and every village has stories older than nations. This is Italy at its most authentic - passionate, proud, and utterly unforgettable."
+        }
+      },
+      "rotterdam": {
+        "name": "Rotterdam",
+        "starterPackBadge": "🌃 Your Rotterdam nightlife starter pack",
+        "whyDifferent": {
+          "title1": "Nightlife that hits different",
+          "content1": "From cutting-edge rooftop bars to legendary underground techno clubs, Rotterdam's after-dark scene is pure fire. The city's industrial edge creates a unique party atmosphere you won't find anywhere else.",
+          "title2": "Culture that never sleeps",
+          "content2": "Rotterdam doesn't just party - it creates. Late-night art galleries, 24-hour creative spaces, and venues that blur the line between club and cultural experience. This is nightlife with substance."
+        }
+      },
+      "paris": {
+        "name": "Paris",
+        "starterPackBadge": "📍 Your Paris starter pack", 
+        "whyDifferent": {
+          "title1": "Culture that actually slaps",
+          "content1": "The Louvre, Musée d'Orsay, street art in Belleville - Paris serves culture on every corner. It's giving main character energy, and you're here for it.",
+          "title2": "Food that changes your life",
+          "content2": "From hole-in-the-wall bistros to Michelin stars, Paris doesn't miss. That first bite of a real French croissant? Life-changing doesn't even cover it."
+        }
+      }
+    }
+  }
+}

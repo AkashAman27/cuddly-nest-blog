@@ -39,12 +39,12 @@ Thumbs.db
 ehthumbs.db
 Icon?
 
-# Ignore JS and MD files (if you must)
-**/*.js
-**/*.md
-**/*.json
-**/*.html
-**/*.txt
+# Ignore generated files (but allow important docs)
+# **/*.js  # Commented out to allow important JS files
+# **/*.md  # Commented out to allow README.md
+# **/*.json # Commented out to allow package.json, etc.
+# **/*.html # Commented out to allow HTML files
+# **/*.txt  # Commented out to allow text files
 
 # Optional: macOS system file
 *.DS_Store
