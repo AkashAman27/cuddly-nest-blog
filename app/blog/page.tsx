@@ -1,4 +1,4 @@
-import { getRecentPosts, getPostsCount, getPopularCategories, getFeaturedPosts, getCombinedRecentPosts, getCuddlyNestPosts, getFeaturedCuddlyNestPosts } from "@/lib/supabase"
+import { getPostsCount, getPopularCategories, getCuddlyNestPosts, getFeaturedCuddlyNestPosts } from "@/lib/supabase"
 import { BlogHomepage } from "@/components/blog-homepage"
 
 // Default categories if database is empty
@@ -41,45 +41,28 @@ export const metadata = {
 }
 
 export default async function BlogPage() {
-  // Try simplified posts first, fallback to combined posts
-  let recentPosts, featuredPosts
+  // Get posts from modern database structure
+  const [recentPostsRaw, featuredPostsRaw] = await Promise.all([
+    getCuddlyNestPosts(12),
+    getFeaturedCuddlyNestPosts(6)
+  ])
   
-  try {
-    // Try our new simplified structure first
-    const [simplifiedRecent, simplifiedFeatured] = await Promise.all([
-      getCuddlyNestPosts(12),
-      getFeaturedCuddlyNestPosts(6)
-    ])
-    
-    if (simplifiedRecent && simplifiedRecent.length > 0) {
-      console.log(`✅ Using simplified blog structure with ${simplifiedRecent.length} posts`)
-      recentPosts = simplifiedRecent.map(post => ({
-        ...post,
-        reading_time: post.reading_time || 5,
-        featured_image: post.featured_image_url ? { file_url: post.featured_image_url } : null,
-        // Ensure author is in the expected format
-        author: typeof post.author?.display_name === 'string' ? post.author.display_name : 'CuddlyNest Team'
-      }))
-      featuredPosts = simplifiedFeatured.map(post => ({
-        ...post,
-        reading_time: post.reading_time || 5,
-        featured_image: post.featured_image_url ? { file_url: post.featured_image_url } : null,
-        // Ensure author is in the expected format
-        author: typeof post.author?.display_name === 'string' ? post.author.display_name : 'CuddlyNest Team'
-      }))
-    } else {
-      throw new Error('No simplified posts found')
-    }
-  } catch (error) {
-    console.log('📦 Falling back to combined posts structure')
-    // Fallback to existing combined structure
-    const [combinedRecent, combinedFeatured] = await Promise.all([
-      getCombinedRecentPosts(12),
-      getFeaturedPosts(6)
-    ])
-    recentPosts = combinedRecent
-    featuredPosts = combinedFeatured
-  }
+  console.log(`✅ Using modern blog structure with ${recentPostsRaw.length} recent posts`)
+  
+  // Transform posts to expected format
+  const recentPosts = recentPostsRaw.map(post => ({
+    ...post,
+    reading_time: post.reading_time || 5,
+    featured_image: post.featured_image_url ? { file_url: post.featured_image_url } : null,
+    author: typeof post.author?.display_name === 'string' ? post.author.display_name : 'CuddlyNest Team'
+  }))
+  
+  const featuredPosts = featuredPostsRaw.map(post => ({
+    ...post,
+    reading_time: post.reading_time || 5,
+    featured_image: post.featured_image_url ? { file_url: post.featured_image_url } : null,
+    author: typeof post.author?.display_name === 'string' ? post.author.display_name : 'CuddlyNest Team'
+  }))
   
   // Fetch other data
   const [totalPosts, categories] = await Promise.all([

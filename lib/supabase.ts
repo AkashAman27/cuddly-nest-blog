@@ -957,6 +957,80 @@ export async function getCuddlyNestPostBySlugWithPreview(slug: string, allowDraf
   }
 }
 
+// Get posts for homepage/listing
+export async function getCuddlyNestPosts(limit: number = 20, offset: number = 0) {
+  try {
+    const { data: posts, error } = await supabase
+      .from('cuddly_nest_modern_post')
+      .select(`
+        id,
+        title,
+        slug,
+        excerpt,
+        featured_image_url,
+        published_at,
+        reading_time,
+        view_count,
+        is_featured,
+        author:modern_authors(id, display_name, avatar_url)
+      `)
+      .eq('status', 'published')
+      .not('published_at', 'is', null)
+      .order('published_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (error) {
+      console.error('Error fetching posts:', error)
+      return []
+    }
+
+    return posts?.map(post => ({
+      ...post,
+      author: post.author || null
+    })) || []
+  } catch (error) {
+    console.error('Exception fetching posts:', error)
+    return []
+  }
+}
+
+// Get featured posts for homepage
+export async function getFeaturedCuddlyNestPosts(limit: number = 5) {
+  try {
+    const { data: posts, error } = await supabase
+      .from('cuddly_nest_modern_post')
+      .select(`
+        id,
+        title,
+        slug,
+        excerpt,
+        featured_image_url,
+        published_at,
+        reading_time,
+        view_count,
+        author:modern_authors(id, display_name, avatar_url)
+      `)
+      .eq('status', 'published')
+      .eq('is_featured', true)
+      .not('published_at', 'is', null)
+      .order('published_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('Error fetching featured posts:', error)
+      return []
+    }
+
+    return posts?.map(post => ({
+      ...post,
+      author: post.author || null
+    })) || []
+  } catch (error) {
+    console.error('Exception fetching featured posts:', error)
+    return []
+  }
+}
+
 // Search posts by title, excerpt, or content
 export async function searchPosts(query: string, limit: number = 20) {
   if (!query.trim()) {
